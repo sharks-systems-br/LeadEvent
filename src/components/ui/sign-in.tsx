@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TransitionLink } from "@/components/ui/page-transition";
 
 // --- TYPE DEFINITIONS ---
 
@@ -127,14 +128,14 @@ const RoleCard = ({
       </div>
 
       <div className="mt-3 flex items-stretch gap-2">
-        <a
+        <TransitionLink
           href={role.href}
-          onClick={() => onSelect?.(role.id)}
+          onNavigate={() => onSelect?.(role.id)}
           className="flex h-12 flex-1 items-center justify-between gap-2 rounded-2xl border border-black/10 bg-white px-4 text-sm font-medium text-foreground transition-colors duration-300 hover:bg-neutral-900 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
         >
           <span>{role.title}</span>
           <ArrowUpRight className="size-4 shrink-0" />
-        </a>
+        </TransitionLink>
 
         <button
           type="button"

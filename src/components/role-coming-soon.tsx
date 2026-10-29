@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { TransitionLink } from "@/components/ui/page-transition";
 import { ArrowLeft, ArrowUpRight, Building2, Sparkles, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,13 +25,13 @@ export function RoleComingSoon({ role }: RoleComingSoonProps) {
       </div>
 
       <div className="animate-element relative w-full max-w-md rounded-3xl border border-black/10 bg-white/70 p-8 text-center shadow-xl shadow-black/5 backdrop-blur-xl">
-        <Link
+        <TransitionLink
           href="/"
           className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="size-4" />
           Voltar
-        </Link>
+        </TransitionLink>
 
         <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-lg shadow-violet-600/30">
           <Icon className="size-6 text-white" />
@@ -43,7 +43,7 @@ export function RoleComingSoon({ role }: RoleComingSoonProps) {
           dados e fazer parte do próximo LeadEvent.
         </p>
 
-        <Link
+        <TransitionLink
           href={otherRole.href}
           className={cn(
             "mt-8 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
@@ -51,7 +51,7 @@ export function RoleComingSoon({ role }: RoleComingSoonProps) {
         >
           {otherRole.label}
           <ArrowUpRight className="size-4" />
-        </Link>
+        </TransitionLink>
 
         <p className="mt-8 flex items-center justify-center gap-2 text-xs text-muted-foreground/70">
           <Zap className="size-3.5" />
