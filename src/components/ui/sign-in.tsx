@@ -1,13 +1,19 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   ArrowUpRight,
   Building2,
   ChevronDown,
   LifeBuoy,
+  Play,
   Sparkles,
-  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +41,7 @@ interface SignInPageProps {
   title?: React.ReactNode;
   description?: React.ReactNode;
   videoSrc?: string;
+  videoMobileSrc?: string;
   videoPosterSrc?: string;
   testimonials?: Testimonial[];
   roles?: RoleOption[];
@@ -64,7 +71,7 @@ const TestimonialCard = ({
 }) => (
   <div
     className={cn(
-      "animate-testimonial flex w-60 items-start gap-3 rounded-3xl border border-white/10 bg-black/35 p-4 backdrop-blur-xl",
+      "animate-testimonial flex w-full items-start gap-3 rounded-3xl border border-white/10 bg-black/35 p-4 backdrop-blur-xl",
       delay
     )}
   >
@@ -191,6 +198,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   ),
   description = "Escolha a opção que mais combina com o seu perfil. Empresas para que possam patrocinar o evento, influenciadores interessados em participar.",
   videoSrc = "/media/leadevent-hero.mp4",
+  videoMobileSrc,
   videoPosterSrc = "/media/leadevent-hero-poster.jpg",
   testimonials = [],
   roles = defaultRoles,
@@ -198,33 +206,112 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   supportHref = "mailto:contato@leadevent.com",
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const isVisibleRef = useRef(false);
+  const allowAutoplayRef = useRef(true);
+  const userStartedRef = useRef(false);
+
+  const [blocked, setBlocked] = useState(false);
+
+  // Resolve the lighter mobile asset on the client. The server snapshot is
+  // `undefined` so the SSR HTML has no <source> and mobile browsers never
+  // start downloading the heavier desktop file before hydration.
+  const subscribeToViewport = useCallback(
+    (onStoreChange: () => void) => {
+      if (!videoMobileSrc) return () => {};
+      const media = window.matchMedia("(max-width: 1023px)");
+      media.addEventListener("change", onStoreChange);
+      return () => media.removeEventListener("change", onStoreChange);
+    },
+    [videoMobileSrc]
+  );
+  const videoSource = useSyncExternalStore(
+    subscribeToViewport,
+    () =>
+      videoMobileSrc && window.matchMedia("(max-width: 1023px)").matches
+        ? videoMobileSrc
+        : videoSrc,
+    () => undefined
+  );
 
   const playVideo = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
+    if (!video.getAttribute("src")) return;
+    if (!allowAutoplayRef.current && !userStartedRef.current) return;
 
     video.muted = true;
     void video.play().catch(() => {
-      // Autoplay can be blocked by the browser. The poster stays visible
-      // and playback is retried the next time the tab becomes visible.
+      // Autoplay can be blocked (e.g. iOS Low Power Mode). Keep the poster
+      // visible and surface the accessible play button instead.
+      setBlocked(true);
     });
   }, []);
 
+  const handlePlayClick = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    userStartedRef.current = true;
+    video.muted = true;
+    setBlocked(false);
+    void video.play().catch(() => setBlocked(true));
+  }, []);
+
+  // Autoplay policy + viewport playback control.
   useEffect(() => {
-    playVideo();
+    const video = videoRef.current;
+    if (!video) return;
+
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+    const connection = (
+      navigator as Navigator & { connection?: { saveData?: boolean } }
+    ).connection;
+    const saveData = Boolean(connection?.saveData);
+    const shouldAutoplay = !reduceMotion && !saveData;
+    allowAutoplayRef.current = shouldAutoplay;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        isVisibleRef.current = entry.isIntersecting;
+
+        if (!entry.isIntersecting) {
+          video.pause();
+          return;
+        }
+
+        if (!shouldAutoplay && !userStartedRef.current) {
+          // Reduced motion / data saver: keep the poster and show the button.
+          setBlocked(true);
+          return;
+        }
+
+        playVideo();
+      },
+      { threshold: 0.25 }
+    );
+
+    observer.observe(video);
 
     const onVisibilityChange = () => {
-      if (!document.hidden) playVideo();
+      if (!document.hidden && isVisibleRef.current) playVideo();
+    };
+    const onFocus = () => {
+      if (isVisibleRef.current) playVideo();
     };
 
     document.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("focus", playVideo);
+    window.addEventListener("focus", onFocus);
 
     return () => {
+      observer.disconnect();
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("focus", playVideo);
+      window.removeEventListener("focus", onFocus);
     };
-  }, [playVideo]);
+  }, [playVideo, videoSource]);
 
   return (
     <div className="relative flex min-h-[100dvh] w-full flex-col overflow-hidden bg-background font-sans lg:h-[100dvh] lg:flex-row">
@@ -239,7 +326,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
       </div>
 
       {/* Left column: role selection */}
-      <section className="relative z-10 flex flex-1 flex-col px-6 py-8 md:px-12 lg:overflow-y-auto lg:px-16">
+      <section className="relative z-10 order-2 flex flex-1 flex-col px-6 py-8 md:px-12 lg:order-1 lg:overflow-y-auto lg:px-16">
         <header className="animate-element animate-delay-100">
           <Brand />
         </header>
@@ -289,19 +376,18 @@ export const SignInPage: React.FC<SignInPageProps> = ({
         </footer>
       </section>
 
-      {/* Right column: autoplaying video + testimonials */}
-      <section className="relative hidden flex-1 p-4 lg:block">
-        <div className="animate-slide-right animate-delay-300 relative h-full w-full overflow-hidden rounded-3xl border border-white/10 bg-black">
+      {/* Video panel: mobile hero (top) + desktop right column */}
+      <section className="relative order-1 shrink-0 px-6 pt-4 md:px-12 lg:order-2 lg:shrink lg:flex-1 lg:p-4">
+        <div className="animate-hero animate-delay-300 relative aspect-video w-full overflow-hidden rounded-3xl border border-white/10 bg-black lg:aspect-auto lg:h-full">
           <video
             ref={videoRef}
             className="absolute inset-0 h-full w-full object-cover"
-            src={videoSrc}
+            src={videoSource}
             poster={videoPosterSrc}
-            autoPlay
             muted
             loop
             playsInline
-            preload="auto"
+            preload="metadata"
             onCanPlay={playVideo}
             aria-hidden="true"
             tabIndex={-1}
@@ -312,19 +398,33 @@ export const SignInPage: React.FC<SignInPageProps> = ({
           <div className="absolute inset-0 bg-violet-950/10" />
           <div className="absolute inset-0 rounded-3xl ring-1 ring-inset ring-white/10" />
 
+          {/* Accessible fallback when autoplay is blocked */}
+          {blocked && (
+            <button
+              type="button"
+              onClick={handlePlayClick}
+              aria-label="Reproduzir vídeo"
+              className="absolute left-1/2 top-1/2 z-20 flex size-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white backdrop-blur-md transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            >
+              <Play className="size-6" />
+            </button>
+          )}
+
           {/* Bottom testimonials */}
           {testimonials.length > 0 && (
-            <div className="absolute inset-x-0 bottom-0">
+            <div className="absolute inset-x-0 bottom-0 hidden lg:block">
               <p className="animate-element animate-delay-900 mb-4 px-8 text-xs font-medium uppercase tracking-[0.2em] text-white/50">
                 Quem já está dentro
               </p>
               <div className="flex w-full justify-center gap-4 px-8 pb-8">
-                <TestimonialCard
-                  testimonial={testimonials[0]}
-                  delay="animate-delay-1000"
-                />
+                <div className="w-60">
+                  <TestimonialCard
+                    testimonial={testimonials[0]}
+                    delay="animate-delay-1000"
+                  />
+                </div>
                 {testimonials[1] && (
-                  <div className="hidden xl:flex">
+                  <div className="hidden w-60 xl:block">
                     <TestimonialCard
                       testimonial={testimonials[1]}
                       delay="animate-delay-1200"
@@ -332,7 +432,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                   </div>
                 )}
                 {testimonials[2] && (
-                  <div className="hidden 2xl:flex">
+                  <div className="hidden w-60 2xl:block">
                     <TestimonialCard
                       testimonial={testimonials[2]}
                       delay="animate-delay-1400"

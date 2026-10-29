@@ -185,6 +185,22 @@
     animation: slideRightIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
+  /* Hero: fade-up on mobile, slide-from-right on desktop. */
+  .animate-hero {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(14px);
+    animation: fadeSlideIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  @media (min-width: 64rem) {
+    .animate-hero {
+      filter: blur(8px);
+      transform: translateX(28px);
+      animation: slideRightIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+  }
+
   .animate-testimonial {
     opacity: 0;
     filter: blur(6px);
@@ -271,6 +287,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .animate-element,
+  .animate-hero,
   .animate-slide-right,
   .animate-testimonial {
     animation-duration: 0.01ms;

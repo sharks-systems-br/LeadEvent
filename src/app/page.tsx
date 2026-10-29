@@ -29,6 +29,7 @@ export default function Home() {
     <SignInPage
       testimonials={sampleTestimonials}
       videoSrc="/media/leadevent-hero.mp4"
+      videoMobileSrc="/media/leadevent-hero-mobile.mp4"
       videoPosterSrc="/media/leadevent-hero-poster.jpg"
     />
   );
