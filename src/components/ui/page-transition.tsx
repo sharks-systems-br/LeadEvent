@@ -26,8 +26,10 @@ const SAFETY_DURATION = 4000;
 const EASING = "cubic-bezier(0.65, 0, 0.35, 1)";
 
 /**
- * Wavy (liquid) leading edge. The panel is oversized on top/bottom/right so the
- * displacement only affects the edge that actually sweeps across the viewport.
+ * Wavy (liquid) leading edge. The panel is oversized on all four sides: the
+ * top/bottom bleed hides the vertical displacement, and the left bleed lets the
+ * leading edge finish its sweep past the viewport, so the displaced pixels
+ * never erode into the covered screen at the end of the transition.
  */
 const LIQUID_FILTER_ID = "leadevent-curtain-liquid";
 const DISPLACEMENT_SCALE = 52;
@@ -228,7 +230,7 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
 
       <div
         aria-hidden="true"
-        className="fixed bottom-[-140px] left-0 right-[-140px] top-[-140px] z-[100] bg-[#2a1f18] will-change-transform"
+        className="fixed bottom-[-140px] left-[-140px] right-[-140px] top-[-140px] z-[100] bg-[#2a1f18] will-change-transform"
         style={overlayStyle}
       >
         <div
