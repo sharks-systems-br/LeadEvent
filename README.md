@@ -8,6 +8,7 @@ Sistema para captação de leads, credenciamento e automação de outreach em ev
 - React 19 + TypeScript
 - Tailwind CSS 4
 - shadcn/ui (`components.json`, `src/components/ui`)
+- framer-motion (animações dos formulários)
 
 ## Como rodar
 
@@ -35,19 +36,33 @@ Arquivos principais:
 
 - `src/app/page.tsx` — composição da página inicial (testemunhos, vídeo e rotas).
 - `src/components/ui/sign-in.tsx` — componente shadcn da tela de acesso. Recebe `roles`, `testimonials`, `videoSrc`, `videoPosterSrc` e `onSelectRole`.
-- `src/app/empresa/page.tsx` e `src/app/influencer/page.tsx` — placeholders para os próximos formulários.
+- `src/app/empresa/page.tsx` e `src/app/influencer/page.tsx` — rotas dos formulários.
+- `src/components/forms/influencer-form.tsx` e `src/components/forms/company-form.tsx` — formulários completos.
+- `src/components/forms/video-preview.tsx` — prévia de vídeo (YouTube, Vimeo, link direto e upload).
+- `src/lib/form-validation.ts` — máscaras e validações compartilhadas.
 
 As rotas dos botões ficam no array `roles` em `src/components/ui/sign-in.tsx` e podem ser trocadas sem alterar o layout:
 
 ```tsx
 {
   id: "company",
+  label: "Empresa",
   title: "Sou Empresa",
-  description: "Encontre criadores para o seu próximo evento.",
+  description:
+    "Sua empresa será patrocinadora do evento e a marca será divulgada para todo o público.",
   href: "/empresa",
   badge: "Patrocinador",
 }
 ```
+
+## Formulários
+
+O formulário de influencer usa o layout de duas colunas com prévia do vídeo à direita. No celular, a prévia aparece logo abaixo dos campos de vídeo.
+
+- **Influencer** (`/influencer`): nome, Instagram, telefone, descrição, nicho (com opção “Outro”), link ou upload de vídeo, faixa de seguidores, rede social opcional, estado/cidade e consentimento.
+- **Empresa** (`/empresa`): nome fantasia, CNPJ, e-mail de contato, responsável, Instagram ou site, descrição, formatos de parceria, disponibilidade para reunião e consentimento.
+
+Validações e máscaras rodam apenas no frontend: nome completo, `@` do Instagram, telefone com DDD, CNPJ com dígitos verificadores, e-mail, site e links de vídeo. As cidades são carregadas da API de localidades do IBGE ao selecionar o estado, com opção de digitar a cidade manualmente. Vídeos enviados são validados por tipo e tamanho (até 200 MB) e exibidos na prévia antes do envio.
 
 ## Vídeo do painel lateral
 
