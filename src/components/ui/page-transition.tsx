@@ -17,12 +17,21 @@ import {
 
 type Phase = "idle" | "covering" | "revealing";
 
-type Navigate = (href: string) => void;
+type Navigate = (href: string) => boolean;
 
 type TimerRef = { current: ReturnType<typeof setTimeout> | null };
 
 const COVER_DURATION = 850;
-const SAFETY_DURATION = 4000;
+/**
+ * Fallback for a navigation that never settles. It must stay well above a slow
+ * first visit (route compilation, cold RSC payload…), otherwise the curtain
+ * leaves while the old screen is still mounted and the page swaps abruptly
+ * afterwards — the "transition vanished without changing the screen" bug.
+ * Development compiles the route on demand, so it needs a much larger budget.
+ */
+const SAFETY_DURATION = process.env.NODE_ENV === "development" ? 20000 : 8000;
+/** Delay before the curtain admits the route is taking longer than usual. */
+const WAITING_DELAY = 2000;
 const EASING = "cubic-bezier(0.65, 0, 0.35, 1)";
 
 /**
@@ -71,6 +80,7 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const [phase, setPhase] = useState<Phase>("idle");
+  const [waiting, setWaiting] = useState(false);
 
   const phaseRef = useRef<Phase>("idle");
   const pendingHrefRef = useRef<string | null>(null);
@@ -84,6 +94,8 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
   const updatePhase = useCallback((next: Phase) => {
     phaseRef.current = next;
     setPhase(next);
+    // Any phase change hides the slow-navigation indicator.
+    setWaiting(false);
   }, []);
 
   const unlockScroll = useCallback(() => {
@@ -95,14 +107,16 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
 
   const navigate = useCallback<Navigate>(
     (href) => {
-      if (typeof window === "undefined") return;
-      if (phaseRef.current !== "idle") return;
-      if (!isInternalHref(href)) return;
-      if (normalizePath(href) === normalizePath(pathname)) return;
+      if (typeof window === "undefined") return false;
+      if (phaseRef.current !== "idle") return true;
+      if (!isInternalHref(href)) return false;
+      // Same route: let the browser handle it (in-page anchors, etc.) instead
+      // of running a curtain that would reveal the very same screen.
+      if (normalizePath(href) === normalizePath(pathname)) return false;
 
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         router.push(href);
-        return;
+        return true;
       }
 
       clearTimer(pushTimerRef);
@@ -118,12 +132,13 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
       document.body.style.overflow = "hidden";
 
       updatePhase("covering");
+      return true;
     },
     [pathname, router, updatePhase]
   );
 
-  // Cover the viewport for 620ms, then let the route change underneath.
-  // The safety timer reveals the page even if the route never settles.
+  // Cover the viewport, then let the route change underneath.
+  // The safety timer only reveals the page if the route never settles.
   useEffect(() => {
     if (phase !== "covering") return;
 
@@ -152,6 +167,15 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
     if (normalizePath(pathname) !== normalizePath(pending)) return;
     updatePhase("revealing");
   }, [pathname, updatePhase]);
+
+  // If the route is taking longer than usual, show progress on the curtain so
+  // the wait never looks like a frozen screen.
+  useEffect(() => {
+    if (phase !== "covering") return;
+
+    const timer = setTimeout(() => setWaiting(true), WAITING_DELAY);
+    return () => clearTimeout(timer);
+  }, [phase]);
 
   // Let the curtain finish sliding out, then park it off-screen and unscroll.
   useEffect(() => {
@@ -242,6 +266,23 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
           className="absolute inset-y-0 left-0 w-px bg-white/10"
         />
       </div>
+
+      {/* Outside the curtain so the liquid filter never warps the spinner. */}
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none fixed inset-0 z-[101] flex flex-col items-center justify-center gap-3 transition-opacity duration-500 ${
+          waiting ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <span className="size-6 animate-spin rounded-full border-2 border-white/20 border-t-white/70" />
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+          Abrindo
+        </p>
+      </div>
+
+      <span className="sr-only" role="status" aria-live="polite">
+        {waiting ? "Abrindo a página, aguarde." : ""}
+      </span>
     </PageTransitionContext.Provider>
   );
 }
@@ -252,11 +293,9 @@ export function usePageTransition(): Navigate {
 
   return useCallback<Navigate>(
     (href) => {
-      if (navigate) {
-        navigate(href);
-        return;
-      }
+      if (navigate) return navigate(href);
       router.push(href);
+      return true;
     },
     [navigate, router]
   );
@@ -290,9 +329,12 @@ export function TransitionLink({
     if (typeof href !== "string") return;
     if (!isInternalHref(href)) return;
 
+    // Only take over the click when the curtain will actually run. Same-page
+    // links (e.g. "/#contato") keep their native behaviour.
+    if (!navigate(href)) return;
+
     event.preventDefault();
     onNavigate?.();
-    navigate(href);
   };
 
   return (
