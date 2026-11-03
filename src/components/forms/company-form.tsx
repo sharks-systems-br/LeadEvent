@@ -28,6 +28,7 @@ import {
   FormPageShell,
   FormSuccess,
 } from "@/components/forms/form-shell";
+import { Turnstile, TURNSTILE_ENABLED } from "@/components/forms/turnstile";
 import {
   formatCNPJ,
   isValidCNPJ,
@@ -95,7 +96,7 @@ interface CompanyValues {
   consent: boolean;
 }
 
-type FieldKey = keyof CompanyValues;
+type FieldKey = keyof CompanyValues | "turnstile";
 type Errors = Partial<Record<FieldKey, string>>;
 
 const INITIAL_VALUES: CompanyValues = {
@@ -121,10 +122,14 @@ const FIELD_IDS: Record<FieldKey, string> = {
   formats: "company-formats",
   customFormat: "company-custom-format",
   availability: "company-availability",
+  turnstile: "company-turnstile",
   consent: "company-consent",
 };
 
-function validate(values: CompanyValues): Errors {
+function validate(
+  values: CompanyValues,
+  turnstileToken: string | null
+): Errors {
   const errors: Errors = {};
 
   if (!values.companyName.trim()) {
@@ -174,6 +179,10 @@ function validate(values: CompanyValues): Errors {
     errors.consent = "É necessário autorizar o contato para continuar.";
   }
 
+  if (TURNSTILE_ENABLED && !turnstileToken) {
+    errors.turnstile = "Conclua a verificação de segurança para continuar.";
+  }
+
   return errors;
 }
 
@@ -198,6 +207,9 @@ export function CompanyForm() {
   const [values, setValues] = React.useState<CompanyValues>(INITIAL_VALUES);
   const [errors, setErrors] = React.useState<Errors>({});
   const [submitted, setSubmitted] = React.useState(false);
+  const [turnstileToken, setTurnstileToken] = React.useState<string | null>(
+    null
+  );
 
   const setField = <K extends keyof CompanyValues>(
     key: K,
@@ -230,7 +242,7 @@ export function CompanyForm() {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const nextErrors = validate(values);
+    const nextErrors = validate(values, turnstileToken);
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       focusFirstError(nextErrors);
@@ -245,6 +257,7 @@ export function CompanyForm() {
   const handleReset = () => {
     setValues(INITIAL_VALUES);
     setErrors({});
+    setTurnstileToken(null);
     setSubmitted(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -518,6 +531,30 @@ export function CompanyForm() {
                     telefone sobre esta parceria. Os dados serão usados apenas
                     para este contato.
                   </ConsentCheckbox>
+
+                  <div id={FIELD_IDS.turnstile} className="scroll-mt-24">
+                    <Turnstile
+                      onVerify={(token) => {
+                        setTurnstileToken(token);
+                        if (token) {
+                          setErrors((previous) => {
+                            if (!previous.turnstile) return previous;
+                            const next = { ...previous };
+                            delete next.turnstile;
+                            return next;
+                          });
+                        }
+                      }}
+                    />
+                    {errors.turnstile && (
+                      <p
+                        role="alert"
+                        className="mt-2 text-xs font-medium text-red-600"
+                      >
+                        {errors.turnstile}
+                      </p>
+                    )}
+                  </div>
 
                   <div className="border-t border-black/[0.07] pt-6">
                     <SubmitButton

@@ -11,10 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatFileSize, isVideoFile } from "@/lib/form-validation";
-
-/* -------------------------------------------------------------------------- */
-/*                                   Layout                                   */
-/* -------------------------------------------------------------------------- */
+import { MAX_VIDEO_SIZE_MB } from "@/lib/video-validation";
 
 export const controlBase =
   "w-full border border-black/10 bg-white text-sm text-foreground shadow-[0_1px_0_rgba(0,0,0,0.02)] outline-none transition placeholder:text-muted-foreground/60 focus:border-black/30 focus:ring-4 focus:ring-black/[0.05] disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:opacity-70";
@@ -120,10 +117,6 @@ export function FormSection({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                   Inputs                                   */
-/* -------------------------------------------------------------------------- */
-
 type TextInputProps = React.ComponentProps<"input"> & {
   invalid?: boolean;
   leading?: React.ReactNode;
@@ -219,10 +212,6 @@ export function SelectInput({
     </div>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/*                              Choice controls                               */
-/* -------------------------------------------------------------------------- */
 
 export interface ChoiceOption {
   value: string;
@@ -390,10 +379,6 @@ export function ConsentCheckbox({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                               File dropzone                                */
-/* -------------------------------------------------------------------------- */
-
 interface UploadDropzoneProps {
   id: string;
   file: File | null;
@@ -410,7 +395,7 @@ export function UploadDropzone({
   onFileChange,
   onReject,
   accept = "video/*",
-  maxSizeMb = 200,
+  maxSizeMb = MAX_VIDEO_SIZE_MB,
   invalid,
 }: UploadDropzoneProps) {
   const [dragging, setDragging] = React.useState(false);
@@ -492,7 +477,7 @@ export function UploadDropzone({
         <span className="mt-1 block text-[11px] text-muted-foreground">
           {file
             ? `${formatFileSize(file.size)} · pronto para a prévia`
-            : `MP4, MOV, WEBM · até ${maxSizeMb} MB`}
+            : `MP4, MOV, WEBM · até ${maxSizeMb} MB · 2 min`}
         </span>
       </label>
 
@@ -509,10 +494,6 @@ export function UploadDropzone({
     </div>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/*                                  Buttons                                  */
-/* -------------------------------------------------------------------------- */
 
 type SubmitButtonProps = React.ComponentProps<"button"> & {
   icon?: LucideIcon;
