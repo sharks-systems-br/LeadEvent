@@ -1,4 +1,7 @@
 import {
+    ArrayMaxSize,
+    Equals,
+    IsArray,
     IsBoolean,
     IsEnum,
     IsNotEmpty,
@@ -8,9 +11,12 @@ import {
     IsUrl,
     MaxLength,
     MinLength,
+    ValidateNested,
 } from "class-validator";
 import { NormalizePhone } from "../../../common/decorators/normalize-phone.decorator.js";
 import { FollowerRange } from "../enums/follower-range.enum.js";
+import { Type } from "class-transformer";
+import { CreateInfluencerSocialMediaDto } from "./create-influencer-social-media.dto.js";
 
 export class CreateInfluencerDto {
     @IsString()
@@ -60,5 +66,13 @@ export class CreateInfluencerDto {
     followerRange: FollowerRange;
 
     @IsBoolean()
-    confirmContact: boolean;
+    @Equals(true)
+    confirmContact: true;
+
+    @IsOptional()
+    @IsArray()
+    @ArrayMaxSize(10)
+    @ValidateNested({ each: true })
+    @Type(() => CreateInfluencerSocialMediaDto)
+    socialMedias?: CreateInfluencerSocialMediaDto[];
 }

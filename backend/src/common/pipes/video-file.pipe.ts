@@ -9,7 +9,7 @@ export class VideoFilePipe implements PipeTransform<Express.Multer.File> {
     constructor(private readonly filesService: FilesService) {}
 
     async transform(file: Express.Multer.File) {
-        if (!file) throw new BadRequestException("Arquivo obrigatório");
+        if (!file) throw new BadRequestException("Arquivo obrigatório.");
 
         const type = await fileTypeFromFile(file.path);
 

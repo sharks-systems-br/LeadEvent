@@ -1,6 +1,8 @@
-import { Entity, Enum, Property } from "@mikro-orm/decorators/legacy";
+import { Entity, Enum, OneToMany, Property } from "@mikro-orm/decorators/legacy";
 import { BaseEntity } from "../../../common/entities/base.entity.js";
 import { FollowerRange } from "../enums/follower-range.enum.js";
+import { InfluencerSocialMedia } from "./influencer-social-media.entity.js";
+import { Collection } from "@mikro-orm/core";
 
 @Entity()
 export class Influencer extends BaseEntity {
@@ -33,4 +35,7 @@ export class Influencer extends BaseEntity {
 
     @Enum({ items: () => FollowerRange, nativeEnumName: "FollowerRange" })
     followerRange: FollowerRange;
+
+    @OneToMany(() => InfluencerSocialMedia, sm => sm.influencer)
+    socialMedias = new Collection<InfluencerSocialMedia>(this);
 }

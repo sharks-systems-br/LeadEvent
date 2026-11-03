@@ -13,12 +13,12 @@ export class FilesController {
     @Post()
     @Throttle({
         short: { limit: 1, ttl: seconds(1) },
-        long: { limit: 15, ttl: minutes(5) },
+        long: { limit: 10, ttl: minutes(15) },
     })
     @UseInterceptors(
         FileInterceptor("file", {
             storage: diskStorage({ destination: "./tmp" }),
-            limits: { fileSize: 30 * 1024 * 1024 },
+            limits: { fileSize: 80 * 1024 * 1024 },
             fileFilter: (_req, file, cb) => {
                 const ok = /^video\/(mp4|webm|mov)$/.test(file.mimetype);
                 cb(ok ? null : new BadRequestException("Formato de arquivo não suportado."), ok);
