@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   title: "LeadEvent",
   description:
     "Conectamos empresas e influenciadores em eventos. Escolha o seu perfil para acessar o LeadEvent.",
+  authors: [{ name: "SSB - Sharks Systems Brazil" }],
+  creator: "SSB - Sharks Systems Brazil",
+  publisher: "SSB - Sharks Systems Brazil",
 };
 
 export const viewport: Viewport = {

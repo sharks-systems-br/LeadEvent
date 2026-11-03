@@ -7,6 +7,7 @@ import React, {
   useState,
   useSyncExternalStore,
 } from "react";
+import Image from "next/image";
 import {
   ArrowUpRight,
   Building2,
@@ -17,8 +18,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TransitionLink } from "@/components/ui/page-transition";
-
-// --- TYPE DEFINITIONS ---
 
 export interface Testimonial {
   avatarSrc: string;
@@ -50,25 +49,31 @@ interface SignInPageProps {
   supportHref?: string;
 }
 
-// --- SUB-COMPONENTS ---
-
 const Brand = () => (
   <div className="flex items-center gap-3">
-    {/* <span className="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-lg shadow-violet-600/30">
-      <Zap className="size-5 text-white" strokeWidth={2.5} />
-    </span>
-    <span className="text-lg font-semibold tracking-tight text-foreground">
+    <Image
+      src="/brand/ssb-logo.png"
+      width={150}
+      height={63}
+      alt="SSB - Sharks Systems Brazil"
+      loading="eager"
+      className="h-12 w-auto object-contain"
+    />
+    <span className="h-8 w-px bg-black/10" aria-hidden="true" />
+    <span className="text-sm font-semibold tracking-tight text-foreground">
       LeadEvent
-    </span> */}
+    </span>
   </div>
 );
 
 const TestimonialCard = ({
   testimonial,
   delay,
+  eager,
 }: {
   testimonial: Testimonial;
   delay: string;
+  eager?: boolean;
 }) => (
   <div
     className={cn(
@@ -76,12 +81,13 @@ const TestimonialCard = ({
       delay
     )}
   >
-    {/* eslint-disable-next-line @next/next/no-img-element */}
-    <img
+    <Image
       src={testimonial.avatarSrc}
+      width={36}
+      height={36}
       className="h-9 w-9 shrink-0 rounded-2xl object-cover"
       alt={testimonial.name}
-      loading="lazy"
+      loading={eager ? "eager" : "lazy"}
     />
     <div className="text-sm leading-snug">
       <p className="font-medium text-white">{testimonial.name}</p>
@@ -165,8 +171,6 @@ const RoleCard = ({
   );
 };
 
-// --- MAIN COMPONENT ---
-
 const defaultRoles: RoleOption[] = [
   {
     id: "company",
@@ -192,9 +196,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   title = (
     <span className="font-light tracking-tighter text-foreground">
       Qual é o seu{" "}
-      {/* <span className="bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-500 bg-clip-text font-semibold text-transparent"> */}
-        perfil?
-      {/* </span> */}
+      perfil?
     </span>
   ),
   description = "Escolha a opção que mais combina com o seu perfil. Empresas para que possam patrocinar o evento, influenciadores interessados em participar.",
@@ -213,9 +215,6 @@ export const SignInPage: React.FC<SignInPageProps> = ({
 
   const [blocked, setBlocked] = useState(false);
 
-  // Resolve the lighter mobile asset on the client. The server snapshot is
-  // `undefined` so the SSR HTML has no <source> and mobile browsers never
-  // start downloading the heavier desktop file before hydration.
   const subscribeToViewport = useCallback(
     (onStoreChange: () => void) => {
       if (!videoMobileSrc) return () => {};
@@ -242,8 +241,6 @@ export const SignInPage: React.FC<SignInPageProps> = ({
 
     video.muted = true;
     void video.play().catch(() => {
-      // Autoplay can be blocked (e.g. iOS Low Power Mode). Keep the poster
-      // visible and surface the accessible play button instead.
       setBlocked(true);
     });
   }, []);
@@ -258,7 +255,6 @@ export const SignInPage: React.FC<SignInPageProps> = ({
     void video.play().catch(() => setBlocked(true));
   }, []);
 
-  // Autoplay policy + viewport playback control.
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -285,7 +281,6 @@ export const SignInPage: React.FC<SignInPageProps> = ({
         }
 
         if (!shouldAutoplay && !userStartedRef.current) {
-          // Reduced motion / data saver: keep the poster and show the button.
           setBlocked(true);
           return;
         }
@@ -316,7 +311,6 @@ export const SignInPage: React.FC<SignInPageProps> = ({
 
   return (
     <div className="relative flex min-h-[100dvh] w-full flex-col overflow-hidden bg-background font-sans lg:h-[100dvh] lg:flex-row">
-      {/* Ambient background */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 overflow-hidden lg:w-1/2"
@@ -326,7 +320,6 @@ export const SignInPage: React.FC<SignInPageProps> = ({
         <div className="absolute -bottom-24 left-1/3 size-72 rounded-full bg-fuchsia-500/10 blur-[100px]" />
       </div>
 
-      {/* Left column: role selection */}
       <section className="relative z-10 order-2 flex flex-1 flex-col px-6 py-8 md:px-12 lg:order-1 lg:overflow-y-auto lg:px-16">
         <header className="animate-element animate-delay-100">
           <Brand />
@@ -367,7 +360,9 @@ export const SignInPage: React.FC<SignInPageProps> = ({
         </div>
 
         <footer className="animate-element animate-delay-700 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground/70">
-          {/* <span>© 2026 LeadEvent. Todos os direitos reservados.</span> */}
+          <span>
+            Desenvolvido por SSB · Sharks Systems Brazil
+          </span>
           <a
             href="#"
             className="transition-colors hover:text-muted-foreground"
@@ -377,7 +372,6 @@ export const SignInPage: React.FC<SignInPageProps> = ({
         </footer>
       </section>
 
-      {/* Video panel: mobile hero (top) + desktop right column */}
       <section className="relative order-1 shrink-0 px-6 pt-4 md:px-12 lg:order-2 lg:shrink lg:flex-1 lg:p-4">
         <div className="animate-hero animate-delay-300 relative aspect-video w-full overflow-hidden rounded-3xl border border-white/10 bg-black lg:aspect-auto lg:h-full">
           <video
@@ -394,12 +388,10 @@ export const SignInPage: React.FC<SignInPageProps> = ({
             tabIndex={-1}
           />
 
-          {/* Readability overlays */}
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-black/40" />
           <div className="absolute inset-0 bg-violet-950/10" />
           <div className="absolute inset-0 rounded-3xl ring-1 ring-inset ring-white/10" />
 
-          {/* Accessible fallback when autoplay is blocked */}
           {blocked && (
             <button
               type="button"
@@ -411,7 +403,6 @@ export const SignInPage: React.FC<SignInPageProps> = ({
             </button>
           )}
 
-          {/* Bottom testimonials */}
           {testimonials.length > 0 && (
             <div className="absolute inset-x-0 bottom-0 hidden lg:block">
               <p className="animate-element animate-delay-900 mb-4 px-8 text-xs font-medium uppercase tracking-[0.2em] text-white/50">
@@ -422,6 +413,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                   <TestimonialCard
                     testimonial={testimonials[0]}
                     delay="animate-delay-1000"
+                    eager
                   />
                 </div>
                 {testimonials[1] && (

@@ -16,7 +16,6 @@ export function FormPageShell({
 }: FormPageShellProps) {
   return (
     <div className="relative min-h-[100dvh] overflow-x-clip bg-background font-sans">
-      {/* Ambient background */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -55,6 +54,9 @@ export function FormPageShell({
         <span className="inline-flex items-center gap-1.5">
           <ShieldCheck className="size-3.5" />
           Seus dados ficam protegidos
+        </span>
+        <span className="w-full text-[10px] text-muted-foreground/50">
+          Desenvolvido por SSB · Sharks Systems Brazil
         </span>
       </footer>
     </div>
