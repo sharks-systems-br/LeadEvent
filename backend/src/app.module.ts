@@ -11,6 +11,7 @@ import { APP_GUARD, APP_PIPE } from "@nestjs/core";
 import { StorageModule } from "./infra/storage/storage.module.js";
 import { FilesModule } from "./modules/files/files.module.js";
 import { seconds, ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { CompanyModule } from "./modules/company/company.module.js";
 
 @Module({
     imports: [
@@ -34,16 +35,17 @@ import { seconds, ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
                 {
                     name: "short",
                     ttl: seconds(1),
-                    limit: 3,
+                    limit: 2,
                 },
                 {
                     name: "long",
                     ttl: seconds(60),
-                    limit: 100,
+                    limit: 50,
                 },
             ],
             errorMessage: "Too Many Requests.",
         }),
+        CompanyModule,
     ],
     controllers: [AppController],
     providers: [

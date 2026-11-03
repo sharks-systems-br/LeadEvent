@@ -23,13 +23,15 @@ export class InfluencerService {
     }
 
     async create(dto: CreateInfluencerDto): Promise<void> {
-        const { filePath, fileUrl, confirmContact, ...rest } = dto;
+        const { filePath, fileUrl, confirmContact: _, socialMedias, ...rest } = dto;
 
-        if (!confirmContact) {
-            throw new BadRequestException(
-                "Para confirmar seu cadastro, você deve nos autorizar a entrar em contato com você.",
-            );
-        }
+        // if (!confirmContact) {
+        //     throw new BadRequestException(
+        //         "Para confirmar seu cadastro, você deve nos autorizar a entrar em contato com você.",
+        //     );
+        // }
+
+        console.log(rest);
 
         if (filePath) {
             await this.filesService.verifyFilePath(filePath);
@@ -50,7 +52,15 @@ export class InfluencerService {
             videoUrl = await this.storageService.getPublicUrl(videoId);
         }
 
-        this.influencerRepository.create({ ...rest, videoId, videoUrl }, { partial: true });
+        this.influencerRepository.create(
+            {
+                ...rest,
+                videoId,
+                videoUrl,
+                socialMedias: socialMedias?.map(sm => ({ ...sm })),
+            },
+            { partial: true },
+        );
         await this.em.flush();
     }
 
