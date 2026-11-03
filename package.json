@@ -2,6 +2,7 @@
   "name": "leadevent",
   "version": "0.1.0",
   "private": true,
+  "author": "SSB - Sharks Systems Brazil",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
