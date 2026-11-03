@@ -22,24 +22,12 @@ type Navigate = (href: string) => boolean;
 type TimerRef = { current: ReturnType<typeof setTimeout> | null };
 
 const COVER_DURATION = 850;
-/**
- * Fallback for a navigation that never settles. It must stay well above a slow
- * first visit (route compilation, cold RSC payload…), otherwise the curtain
- * leaves while the old screen is still mounted and the page swaps abruptly
- * afterwards — the "transition vanished without changing the screen" bug.
- * Development compiles the route on demand, so it needs a much larger budget.
- */
+
 const SAFETY_DURATION = process.env.NODE_ENV === "development" ? 20000 : 8000;
-/** Delay before the curtain admits the route is taking longer than usual. */
+
 const WAITING_DELAY = 2000;
 const EASING = "cubic-bezier(0.65, 0, 0.35, 1)";
 
-/**
- * Wavy (liquid) leading edge. The panel is oversized on all four sides: the
- * top/bottom bleed hides the vertical displacement, and the left bleed lets the
- * leading edge finish its sweep past the viewport, so the displaced pixels
- * never erode into the covered screen at the end of the transition.
- */
 const LIQUID_FILTER_ID = "leadevent-curtain-liquid";
 const DISPLACEMENT_SCALE = 52;
 const LIQUID_FILTER = `url(#${LIQUID_FILTER_ID})`;
@@ -57,7 +45,6 @@ function isInternalHref(href: string): boolean {
   if (!href) return false;
   if (href.startsWith("#")) return false;
   if (href.startsWith("//")) return false;
-  // Any explicit scheme (http:, https:, mailto:, tel:, javascript:, …).
   if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return false;
   return true;
 }
@@ -94,7 +81,6 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
   const updatePhase = useCallback((next: Phase) => {
     phaseRef.current = next;
     setPhase(next);
-    // Any phase change hides the slow-navigation indicator.
     setWaiting(false);
   }, []);
 
@@ -110,8 +96,6 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
       if (typeof window === "undefined") return false;
       if (phaseRef.current !== "idle") return true;
       if (!isInternalHref(href)) return false;
-      // Same route: let the browser handle it (in-page anchors, etc.) instead
-      // of running a curtain that would reveal the very same screen.
       if (normalizePath(href) === normalizePath(pathname)) return false;
 
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -136,9 +120,6 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
     },
     [pathname, router, updatePhase]
   );
-
-  // Cover the viewport, then let the route change underneath.
-  // The safety timer only reveals the page if the route never settles.
   useEffect(() => {
     if (phase !== "covering") return;
 
@@ -159,7 +140,6 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
     };
   }, [phase, router, updatePhase]);
 
-  // As soon as the pending route is rendered, slide the curtain away.
   useEffect(() => {
     const pending = pendingHrefRef.current;
     if (pending === null) return;
@@ -168,8 +148,6 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
     updatePhase("revealing");
   }, [pathname, updatePhase]);
 
-  // If the route is taking longer than usual, show progress on the curtain so
-  // the wait never looks like a frozen screen.
   useEffect(() => {
     if (phase !== "covering") return;
 
@@ -177,7 +155,6 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer);
   }, [phase]);
 
-  // Let the curtain finish sliding out, then park it off-screen and unscroll.
   useEffect(() => {
     if (phase !== "revealing") return;
 
@@ -191,7 +168,6 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
     return () => clearTimer(finishTimerRef);
   }, [phase, updatePhase, unlockScroll]);
 
-  // Never leave the body locked or a timer running if the provider unmounts.
   useEffect(() => {
     return () => {
       clearTimer(pushTimerRef);
@@ -206,10 +182,7 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
 
   const overlayStyle: CSSProperties = {
     transform: overlayTransform(phase),
-    // Must be instantaneous while idle: resetting from -100% to +100% with a
-    // transition would sweep the panel across the viewport.
     transition: phase === "idle" ? "none" : `transform ${COVER_DURATION}ms ${EASING}`,
-    // The filter is off at rest so the displaced pixels never peek at the edge.
     filter: phase === "idle" ? "none" : LIQUID_FILTER,
     pointerEvents: phase === "idle" ? "none" : "auto",
   };
@@ -246,7 +219,6 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
               yChannelSelector="G"
               result="liquidEdge"
             />
-            {/* Softens the rasterised wave into a creamy, anti-aliased edge. */}
             <feGaussianBlur in="liquidEdge" stdDeviation="0.7" />
           </filter>
         </defs>
@@ -267,7 +239,6 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
         />
       </div>
 
-      {/* Outside the curtain so the liquid filter never warps the spinner. */}
       <div
         aria-hidden="true"
         className={`pointer-events-none fixed inset-0 z-[101] flex flex-col items-center justify-center gap-3 transition-opacity duration-500 ${
@@ -328,9 +299,6 @@ export function TransitionLink({
     if (target && target !== "_self") return;
     if (typeof href !== "string") return;
     if (!isInternalHref(href)) return;
-
-    // Only take over the click when the curtain will actually run. Same-page
-    // links (e.g. "/#contato") keep their native behaviour.
     if (!navigate(href)) return;
 
     event.preventDefault();

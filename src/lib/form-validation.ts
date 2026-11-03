@@ -1,14 +1,4 @@
-/**
- * Frontend-only helpers shared by the influencer and company forms.
- * Everything here is pure and side-effect free so it can run on the server
- * for the initial render as well as on the client during validation.
- */
-
 export const onlyDigits = (value: string) => value.replace(/\D+/g, "");
-
-/* -------------------------------------------------------------------------- */
-/*                                   Masks                                    */
-/* -------------------------------------------------------------------------- */
 
 export function formatPhone(value: string): string {
   const digits = onlyDigits(value).slice(0, 11);
@@ -33,10 +23,6 @@ export function formatCNPJ(value: string): string {
     .replace(/(\d{4})(\d)/, "$1-$2");
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                Regex helpers                               */
-/* -------------------------------------------------------------------------- */
-
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
 export const INSTAGRAM_RE = /^(?!\.)(?!.*\.\.)(?!.*\.$)[A-Za-z0-9._]{1,30}$/;
 export const NAME_CHARS_RE = /^[A-Za-zÀ-ÖØ-öø-ÿ' -]+$/;
@@ -46,10 +32,6 @@ export const DOMAIN_RE =
 
 const VIDEO_FILE_RE = /\.(mp4|webm|ogv|ogg|mov|m4v)$/i;
 export const VIDEO_EXTENSIONS = ["mp4", "webm", "ogv", "ogg", "mov", "m4v"];
-
-/* -------------------------------------------------------------------------- */
-/*                               Field validators                             */
-/* -------------------------------------------------------------------------- */
 
 export function isValidFullName(value: string): boolean {
   const normalized = value.trim().replace(/\s+/g, " ");
@@ -134,10 +116,6 @@ export function validateCompanySocial(value: string): string | null {
   return "Use @usuario, www.suaempresa.com ou um link completo.";
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                    CNPJ                                    */
-/* -------------------------------------------------------------------------- */
-
 export function isValidCNPJ(value: string): boolean {
   const digits = onlyDigits(value);
   if (digits.length !== 14) return false;
@@ -162,10 +140,6 @@ export function isValidCNPJ(value: string): boolean {
     checkDigit(digits.slice(0, 13)) === Number(digits[13])
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/*                                Video helpers                               */
-/* -------------------------------------------------------------------------- */
 
 export type VideoLink =
   | { kind: "youtube"; id: string; label: string }

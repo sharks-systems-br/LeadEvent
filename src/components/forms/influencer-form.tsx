@@ -8,7 +8,6 @@ import {
   MapPin,
   PenLine,
   Send,
-  Sparkles,
   Users,
   Video,
 } from "lucide-react";
@@ -34,6 +33,13 @@ import {
   VideoPreview,
   type PreviewSource,
 } from "@/components/forms/video-preview";
+import { SocialLinksField } from "@/components/forms/social-links-field";
+import { Turnstile, TURNSTILE_ENABLED } from "@/components/forms/turnstile";
+import {
+  createEmptySocialLinks,
+  validateSocialLinks,
+  type SocialLink,
+} from "@/lib/social-links";
 import {
   formatPhone,
   isVideoFile,
@@ -43,6 +49,14 @@ import {
   normalizeInstagram,
   parseVideoLink,
 } from "@/lib/form-validation";
+import {
+  MAX_VIDEO_DURATION_SECONDS,
+  MAX_VIDEO_SIZE_BYTES,
+  MAX_VIDEO_SIZE_MB,
+  formatVideoDuration,
+  readVideoMetadata,
+  type VideoMetadata,
+} from "@/lib/video-validation";
 
 const UF_LIST = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
@@ -83,7 +97,7 @@ interface InfluencerValues {
   customNiche: string;
   videoLink: string;
   followers: string;
-  otherSocial: string;
+  socials: SocialLink[];
   uf: string;
   city: string;
   manualCity: boolean;
@@ -91,8 +105,9 @@ interface InfluencerValues {
   consent: boolean;
 }
 
-type FieldKey = keyof InfluencerValues | "video";
+type FieldKey = keyof InfluencerValues | "video" | "turnstile";
 type Errors = Partial<Record<FieldKey, string>>;
+type VideoCheckStatus = "idle" | "checking" | "ready";
 
 const INITIAL_VALUES: InfluencerValues = {
   fullName: "",
@@ -103,7 +118,7 @@ const INITIAL_VALUES: InfluencerValues = {
   customNiche: "",
   videoLink: "",
   followers: "",
-  otherSocial: "",
+  socials: createEmptySocialLinks(),
   uf: "",
   city: "",
   manualCity: false,
@@ -119,9 +134,10 @@ const FIELD_IDS: Record<FieldKey, string> = {
   niche: "influencer-niche",
   customNiche: "influencer-custom-niche",
   video: "influencer-video",
+  turnstile: "influencer-turnstile",
   videoLink: "influencer-video-link",
   followers: "influencer-followers",
-  otherSocial: "influencer-other-social",
+  socials: "influencer-socials",
   uf: "influencer-uf",
   city: "influencer-city",
   manualCity: "influencer-custom-city",
@@ -129,7 +145,11 @@ const FIELD_IDS: Record<FieldKey, string> = {
   consent: "influencer-consent",
 };
 
-function validate(values: InfluencerValues, hasFile: boolean): Errors {
+function validate(
+  values: InfluencerValues,
+  hasFile: boolean,
+  turnstileToken: string | null
+): Errors {
   const errors: Errors = {};
 
   if (!values.fullName.trim()) {
@@ -174,6 +194,11 @@ function validate(values: InfluencerValues, hasFile: boolean): Errors {
     errors.followers = "Selecione a sua faixa de seguidores.";
   }
 
+  const socialError = validateSocialLinks(values.socials);
+  if (socialError) {
+    errors.socials = socialError;
+  }
+
   if (!values.uf) {
     errors.uf = "Selecione o seu estado.";
   }
@@ -188,6 +213,10 @@ function validate(values: InfluencerValues, hasFile: boolean): Errors {
 
   if (!values.consent) {
     errors.consent = "É necessário autorizar o contato para continuar.";
+  }
+
+  if (TURNSTILE_ENABLED && !turnstileToken) {
+    errors.turnstile = "Conclua a verificação de segurança para continuar.";
   }
 
   return errors;
@@ -218,6 +247,13 @@ export function InfluencerForm() {
   );
   const [submitted, setSubmitted] = React.useState(false);
   const [videoFormat, setVideoFormat] = React.useState<string | null>(null);
+  const [videoMetadata, setVideoMetadata] =
+    React.useState<VideoMetadata | null>(null);
+  const [videoCheck, setVideoCheck] =
+    React.useState<VideoCheckStatus>("idle");
+  const [turnstileToken, setTurnstileToken] = React.useState<string | null>(
+    null
+  );
   const [cities, setCities] = React.useState<string[]>([]);
   const [citiesStatus, setCitiesStatus] = React.useState<
     "idle" | "loading" | "ready" | "error"
@@ -225,14 +261,17 @@ export function InfluencerForm() {
   const [cityRequest, setCityRequest] = React.useState(0);
 
   const objectUrlRef = React.useRef<string | null>(null);
+  const videoCheckRef = React.useRef(0);
+  const videoAbortRef = React.useRef<AbortController | null>(null);
 
   React.useEffect(() => {
     return () => {
+      videoCheckRef.current += 1;
+      videoAbortRef.current?.abort();
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
     };
   }, []);
 
-  // IBGE municipality list for the selected state.
   React.useEffect(() => {
     if (!values.uf) return;
 
@@ -306,20 +345,39 @@ export function InfluencerForm() {
   };
 
   const handleFileChange = (file: File | null) => {
+    videoCheckRef.current += 1;
+    const checkId = videoCheckRef.current;
+    videoAbortRef.current?.abort();
+    videoAbortRef.current = null;
+
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = null;
     }
 
+    setVideoMetadata(null);
+    setVideoCheck("idle");
+
     if (!file) {
       setVideo(null);
+      clearErrors("video");
       return;
     }
 
     if (!isVideoFile(file)) {
+      setVideo(null);
       setErrors((previous) => ({
         ...previous,
         video: "Envie um arquivo de vídeo (MP4, MOV, WEBM...).",
+      }));
+      return;
+    }
+
+    if (file.size > MAX_VIDEO_SIZE_BYTES) {
+      setVideo(null);
+      setErrors((previous) => ({
+        ...previous,
+        video: `O arquivo deve ter no máximo ${MAX_VIDEO_SIZE_MB} MB.`,
       }));
       return;
     }
@@ -329,14 +387,53 @@ export function InfluencerForm() {
     setVideo({ file, url });
     setValues((previous) => ({ ...previous, videoLink: "" }));
     clearErrors("video", "videoLink");
+    setVideoCheck("checking");
+
+    const controller = new AbortController();
+    videoAbortRef.current = controller;
+
+    readVideoMetadata(file, controller.signal).then((metadata) => {
+      if (checkId !== videoCheckRef.current) return;
+
+      videoAbortRef.current = null;
+
+      const duration = metadata.durationSeconds;
+      if (duration !== null && duration > MAX_VIDEO_DURATION_SECONDS) {
+        if (objectUrlRef.current) {
+          URL.revokeObjectURL(objectUrlRef.current);
+          objectUrlRef.current = null;
+        }
+
+        setVideo(null);
+        setVideoMetadata(null);
+        setVideoCheck("idle");
+        setErrors((previous) => ({
+          ...previous,
+          video: `O vídeo tem ${formatVideoDuration(
+            duration
+          )}. Envie um arquivo com até 2 minutos.`,
+        }));
+        return;
+      }
+
+      setVideoMetadata(metadata);
+      setVideoCheck("ready");
+    });
   };
 
   const clearVideo = () => {
+    videoCheckRef.current += 1;
+    videoAbortRef.current?.abort();
+    videoAbortRef.current = null;
+
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = null;
     }
+
     setVideo(null);
+    setVideoMetadata(null);
+    setVideoCheck("idle");
     setValues((previous) => ({ ...previous, videoLink: "" }));
     clearErrors("video", "videoLink");
   };
@@ -359,7 +456,14 @@ export function InfluencerForm() {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const nextErrors = validate(values, Boolean(video));
+    if (videoCheck === "checking") {
+      const message = "Aguarde a verificação do vídeo antes de enviar.";
+      setErrors((previous) => ({ ...previous, video: message }));
+      focusFirstError({ video: message });
+      return;
+    }
+
+    const nextErrors = validate(values, Boolean(video), turnstileToken);
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       focusFirstError(nextErrors);
@@ -367,19 +471,36 @@ export function InfluencerForm() {
     }
 
     setErrors({});
-    setSubmitted(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+    setVideo(null);
+    setVideoMetadata(null);
+    setVideoCheck("idle");
 
-  const handleReset = () => {
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = null;
     }
 
-    setValues(INITIAL_VALUES);
+    setSubmitted(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleReset = () => {
+    videoCheckRef.current += 1;
+    videoAbortRef.current?.abort();
+    videoAbortRef.current = null;
+
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+
+    setValues({ ...INITIAL_VALUES, socials: createEmptySocialLinks() });
     setErrors({});
     setVideo(null);
+    setVideoMetadata(null);
+    setVideoCheck("idle");
+    setVideoFormat(null);
+    setTurnstileToken(null);
     setCities([]);
     setCitiesStatus("idle");
     setSubmitted(false);
@@ -640,8 +761,17 @@ export function InfluencerForm() {
 
                     <p className="flex items-start gap-2 text-[11px] leading-relaxed text-muted-foreground">
                       <Clock className="mt-0.5 size-3.5 shrink-0" />
-                      Vídeos de até 2 minutos ajudam na avaliação. O envio de
-                      uma opção substitui a outra.
+                      {videoCheck === "checking"
+                        ? "Verificando duração e resolução do vídeo..."
+                        : videoMetadata?.durationSeconds != null
+                          ? `Vídeo de ${formatVideoDuration(
+                              videoMetadata.durationSeconds
+                            )}${
+                              videoMetadata.width && videoMetadata.height
+                                ? ` em ${videoMetadata.width}×${videoMetadata.height}`
+                                : ""
+                            }. Limite de 2 minutos e ${MAX_VIDEO_SIZE_MB} MB.`
+                          : `Vídeos de até 2 minutos e ${MAX_VIDEO_SIZE_MB} MB ajudam na avaliação. O envio de uma opção substitui a outra.`}
                     </p>
 
                     <div className="lg:hidden">
@@ -679,21 +809,15 @@ export function InfluencerForm() {
                     </Field>
 
                     <Field
-                      label="Outra rede social"
-                      htmlFor={FIELD_IDS.otherSocial}
+                      label="Outras redes sociais"
+                      htmlFor={FIELD_IDS.socials}
                       optional
+                      error={errors.socials}
                     >
-                      <TextInput
-                        id={FIELD_IDS.otherSocial}
-                        name="otherSocial"
-                        value={values.otherSocial}
-                        onChange={(event) =>
-                          setField("otherSocial", event.target.value)
-                        }
-                        placeholder="@seu.perfil no TikTok"
-                        maxLength={80}
-                        autoCapitalize="none"
-                        autoCorrect="off"
+                      <SocialLinksField
+                        id={FIELD_IDS.socials}
+                        value={values.socials}
+                        onChange={(socials) => setField("socials", socials)}
                       />
                     </Field>
                   </FormSection>
@@ -831,11 +955,29 @@ export function InfluencerForm() {
                       serão compartilhados com terceiros.
                     </ConsentCheckbox>
 
+                    <div id={FIELD_IDS.turnstile} className="scroll-mt-24">
+                      <Turnstile
+                        onVerify={(token) => {
+                          setTurnstileToken(token);
+                          if (token) clearErrors("turnstile");
+                        }}
+                      />
+                      {errors.turnstile && (
+                        <p
+                          role="alert"
+                          className="mt-2 text-xs font-medium text-red-600"
+                        >
+                          {errors.turnstile}
+                        </p>
+                      )}
+                    </div>
+
                     <div className="border-t border-black/[0.07] pt-6">
                       <SubmitButton
                         type="submit"
                         icon={ArrowRight}
                         className="w-full sm:w-auto"
+                        disabled={videoCheck === "checking"}
                       >
                         Enviar cadastro
                       </SubmitButton>
@@ -884,7 +1026,7 @@ export function InfluencerForm() {
             </p>
             <ul className="mt-3 space-y-2.5">
               {[
-                "Grave na vertical, com boa luz e áudio limpo.",
+                "Grave na vertical, em 720p ou mais, com boa luz e áudio limpo.",
                 "Diga seu nome e seu nicho nos primeiros segundos.",
                 "Mantenha o vídeo com até 2 minutos.",
               ].map((tip) => (

@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, Clapperboard, Link2, Maximize2, Play, X } from "lucide-react";
 import type { VideoLink } from "@/lib/form-validation";
 import { formatFileSize } from "@/lib/form-validation";
+import { MAX_VIDEO_SIZE_MB } from "@/lib/video-validation";
 import { cn } from "@/lib/utils";
 
 export type PreviewSource =
@@ -21,7 +22,6 @@ export type PreviewSource =
 interface VideoPreviewProps {
   source: PreviewSource | null;
   onClear?: () => void;
-  /** Receives the detected aspect ratio label ("16:9", "9:16"...). */
   onFormatChange?: (label: string | null) => void;
   className?: string;
 }
@@ -160,7 +160,6 @@ function SlowLoading() {
       transition={{ duration: 1.1, ease: "easeOut" }}
       className="absolute inset-0 z-10 flex items-center justify-center bg-black/30 px-6"
     >
-      {/* Progressive blur: the video stays visible while it "materialises" */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -214,8 +213,6 @@ export function VideoPreview({
   const expanded = expandedKey === key && hasSource;
   const activeAspect = aspect && aspect.key === key ? aspect : null;
   const ratio = activeAspect?.ratio ?? DEFAULT_RATIO;
-  // Embeds (YouTube/Vimeo) don't expose the real video size, so the expanded
-  // view uses the classic player shape instead of the vertical preview frame.
   const expandedRatio =
     source && (source.kind === "file" || source.kind === "upload")
       ? ratio
@@ -237,9 +234,6 @@ export function VideoPreview({
     return () => window.clearTimeout(timer);
   }, []);
 
-  // Only mount the player when this instance is actually visible. The form
-  // renders one preview in the desktop column and another inline on mobile,
-  // so this keeps the hidden copy from downloading the video twice.
   React.useEffect(() => {
     const node = containerRef.current;
     if (!node) return;
@@ -263,7 +257,6 @@ export function VideoPreview({
     return () => observer.disconnect();
   }, []);
 
-  // Only surface the heavy loading state when the video really takes a while.
   React.useEffect(() => {
     if (!hasSource || ready || !inView) return;
 
@@ -287,7 +280,6 @@ export function VideoPreview({
     setExpandedKey(null);
   }, []);
 
-  // Escape to close, lock the page scroll and keep focus inside the dialog.
   React.useEffect(() => {
     if (!expanded) return;
 
@@ -332,7 +324,6 @@ export function VideoPreview({
         className="relative max-h-[76dvh] w-full overflow-hidden bg-[#161310]"
         style={{ aspectRatio: ratio }}
       >
-        {/* Decorative backdrop for the empty state */}
         {!source && (
           <div
             aria-hidden="true"
@@ -414,8 +405,6 @@ export function VideoPreview({
 
         <AnimatePresence>{slow && <SlowLoading />}</AnimatePresence>
 
-        {/* Floating chrome — pointer-events-none so the player keeps its own
-            controls working (play/pause) underneath. */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 p-4">
           <div className="pointer-events-auto">
             {source && onClear && (
@@ -468,16 +457,15 @@ export function VideoPreview({
         </p>
       </div>
 
-      {/* Footer disappears once the media renders; only the status icon stays. */}
       {!source && (
-        <div className="border-t border-white/10 bg-[#14110f] px-4 py-3.5">
+        <div className="bg-black px-4 py-3.5">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
                 Aguardando vídeo
               </p>
-              <p className="mt-1 truncate text-xs text-white/70">
-                Link do YouTube/Vimeo ou arquivo até 200 MB
+              <p className="mt-1 truncate text-xs text-white/90">
+                {`Link do YouTube/Vimeo ou arquivo até ${MAX_VIDEO_SIZE_MB} MB`}
               </p>
             </div>
 
@@ -516,8 +504,6 @@ export function VideoPreview({
                   className="relative max-h-[86dvh] overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl"
                   style={{
                     aspectRatio: expandedRatio,
-                    // Keeps the frame inside 92% of the viewport width and
-                    // 86% of its height without breaking the video ratio.
                     width: `min(92vw, ${(86 * expandedRatio).toFixed(4)}dvh, 64rem)`,
                   }}
                 >
