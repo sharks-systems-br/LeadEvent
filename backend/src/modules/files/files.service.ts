@@ -9,9 +9,8 @@ export class FilesService {
     async removeFile(path: string): Promise<void> {
         try {
             await unlink(path);
-            this.logger.log(`Removido: ${path}`);
         } catch (err: any) {
-            this.logger.warn(`Falha ao remover ${path}: ${err}`);
+            this.logger.warn(`Falha ao remover ${path}:`, err);
         }
     }
 

@@ -31,8 +31,6 @@ export class InfluencerService {
         //     );
         // }
 
-        console.log(rest);
-
         if (filePath) {
             await this.filesService.verifyFilePath(filePath);
         } else if (!fileUrl) {
@@ -52,16 +50,22 @@ export class InfluencerService {
             videoUrl = await this.storageService.getPublicUrl(videoId);
         }
 
-        this.influencerRepository.create(
-            {
-                ...rest,
-                videoId,
-                videoUrl,
-                socialMedias: socialMedias?.map(sm => ({ ...sm })),
-            },
-            { partial: true },
-        );
-        await this.em.flush();
+        try {
+            this.influencerRepository.create(
+                {
+                    ...rest,
+                    videoId,
+                    videoUrl,
+                    socialMedias: socialMedias?.map(sm => ({ ...sm })),
+                },
+                { partial: true },
+            );
+            await this.em.flush();
+        } catch (err) {
+            if (videoId) await this.storageService.delete(videoId);
+
+            throw err;
+        }
     }
 
     findAll() {

@@ -1,6 +1,17 @@
 import { Transform } from "class-transformer";
-import { IsString, IsNotEmpty, MaxLength, IsEmail, IsArray, ArrayMaxSize, IsBoolean, Equals } from "class-validator";
+import {
+    IsString,
+    IsNotEmpty,
+    MaxLength,
+    IsEmail,
+    IsArray,
+    ArrayMaxSize,
+    IsBoolean,
+    Equals,
+    IsEnum,
+} from "class-validator";
 import { IsCNPJ } from "cpf-cnpj-validator/class-validator";
+import { Disponibility } from "../enums/disponibility.enum.js";
 
 export class CreateCompanyDto {
     @IsString()
@@ -42,4 +53,7 @@ export class CreateCompanyDto {
     @IsBoolean()
     @Equals(true)
     confirmContact: true;
+
+    @IsEnum(Disponibility)
+    disponibility: Disponibility;
 }
