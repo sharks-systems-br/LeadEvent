@@ -1,7 +1,8 @@
-import { Entity, OneToMany, Property } from "@mikro-orm/decorators/legacy";
+import { Entity, Enum, OneToMany, Property } from "@mikro-orm/decorators/legacy";
 import { BaseEntity } from "../../../common/entities/base.entity.js";
 import { PartnershipFormat } from "./partnership-format.entity.js";
 import { Collection } from "@mikro-orm/core";
+import { Disponibility } from "../enums/disponibility.enum.js";
 
 @Entity()
 export class Company extends BaseEntity {
@@ -25,4 +26,7 @@ export class Company extends BaseEntity {
 
     @OneToMany(() => PartnershipFormat, p => p.company)
     partnershipFormats = new Collection<PartnershipFormat>(this);
+
+    @Enum({ items: () => Disponibility, nativeEnumName: "Disponibility" })
+    disponibility: Disponibility;
 }

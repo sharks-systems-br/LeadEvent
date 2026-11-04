@@ -29,7 +29,27 @@ export class DriveService extends StorageService {
         this.folderId = config.folderId;
     }
 
+    private uploadLimit = { hour: new Date().getHours(), count: 0 };
+
+    private checkUploadLimit() {
+        const currentHour = new Date().getHours();
+
+        if (currentHour !== this.uploadLimit.hour) {
+            this.uploadLimit = { hour: currentHour, count: 0 };
+        }
+
+        if (this.uploadLimit.count >= 50) {
+            throw new InternalServerErrorException(
+                "Não foi possível realizar o upload do seu arquivo, tente novamente mais tarde.",
+            );
+        }
+
+        this.uploadLimit.count++;
+    }
+
     async upload(path: string): Promise<{ id: string }> {
+        this.checkUploadLimit();
+
         try {
             const type = await fileTypeFromFile(path);
 
@@ -42,7 +62,7 @@ export class DriveService extends StorageService {
                     mimeType: type?.mime ?? "application/octet-stream",
                     body: createReadStream(path),
                 },
-                fields: "id, name, webViewLink",
+                fields: "id",
             });
 
             await this.drive.permissions.create({
@@ -55,6 +75,10 @@ export class DriveService extends StorageService {
             this.logger.error("Falha ao fazer upload do arquivo para o Drive:", err);
             throw new InternalServerErrorException("Falha ao armazer arquivo.");
         }
+    }
+
+    async delete(id: string): Promise<void> {
+        await this.drive.files.delete({ fileId: id });
     }
 
     getPublicUrl(id: string): string {
