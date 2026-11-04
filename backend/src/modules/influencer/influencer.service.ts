@@ -76,7 +76,7 @@ export class InfluencerService {
         return `This action returns a #${id} influencer`;
     }
 
-    update(id: number, updateInfluencerDto: UpdateInfluencerDto) {
+    update(id: number, _dto: UpdateInfluencerDto) {
         return `This action updates a #${id} influencer`;
     }
 
