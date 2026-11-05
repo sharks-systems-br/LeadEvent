@@ -15,16 +15,16 @@ Desenvolvido por **SSB – Sharks Systems Brazil**.
 ## Como rodar
 
 ```bash
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 Abra [http://localhost:3000](http://localhost:3000).
 
 ```bash
-npm run build   # build de produção
-npm run start   # serve o build
-npm run lint    # ESLint
+bun run build
+bun run start
+bun run lint
 ```
 
 ## Variáveis de ambiente
