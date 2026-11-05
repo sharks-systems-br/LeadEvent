@@ -15,7 +15,7 @@ export class FilesService {
     }
 
     async verifyFilePath(path: string): Promise<void> {
-        if (!/^tmp\\[a-f0-9]{32}$/.test(path)) {
+        if (!/^tmp[\\/][a-f0-9]{32}$/.test(path)) {
             throw new BadRequestException("Caminho de arquivo inválido.");
         }
 

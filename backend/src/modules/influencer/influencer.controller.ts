@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from "@nestjs/common";
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from "@nestjs/common";
 import { InfluencerService } from "./influencer.service.js";
 import { CreateInfluencerDto } from "./dto/create-influencer.dto.js";
 import { UpdateInfluencerDto } from "./dto/update-influencer.dto.js";
 import { minutes, seconds, Throttle } from "@nestjs/throttler";
+import { TurnstileGuard } from "../../common/guards/turnstile.guard.js";
 
 @Controller("influencers")
 export class InfluencerController {
@@ -12,6 +13,7 @@ export class InfluencerController {
         short: { limit: 1, ttl: seconds(1) },
         long: { limit: 5, ttl: minutes(5) },
     })
+    @UseGuards(TurnstileGuard)
     @Post()
     create(@Body() createInfluencerDto: CreateInfluencerDto): Promise<void> {
         return this.influencerService.create(createInfluencerDto);

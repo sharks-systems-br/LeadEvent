@@ -1,12 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from "@nestjs/common";
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from "@nestjs/common";
 import { CompanyService } from "./company.service.js";
 import { CreateCompanyDto } from "./dto/create-company.dto.js";
 import { UpdateCompanyDto } from "./dto/update-company.dto.js";
+import { TurnstileGuard } from "../../common/guards/turnstile.guard.js";
 
 @Controller("companies")
 export class CompanyController {
     constructor(private readonly companyService: CompanyService) {}
 
+    @UseGuards(TurnstileGuard)
     @Post()
     create(@Body() createCompanyDto: CreateCompanyDto) {
         return this.companyService.create(createCompanyDto);
