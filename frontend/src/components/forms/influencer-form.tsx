@@ -40,6 +40,8 @@ import {
   validateSocialLinks,
   type SocialLink,
 } from "@/lib/social-links";
+import { getApiErrorMessage } from "@/lib/api/errors";
+import { submitInfluencer } from "@/lib/api/submissions";
 import {
   formatPhone,
   isVideoFile,
@@ -178,8 +180,14 @@ function validate(
 
   if (!values.niche) {
     errors.niche = "Selecione o seu nicho de conteúdo.";
-  } else if (values.niche === "Outro" && !values.customNiche.trim()) {
-    errors.customNiche = "Descreva o seu nicho.";
+  } else if (values.niche === "Outro") {
+    const customNiche = values.customNiche.trim();
+
+    if (!customNiche) {
+      errors.customNiche = "Descreva o seu nicho.";
+    } else if (customNiche.length > 30) {
+      errors.customNiche = "Use no máximo 30 caracteres.";
+    }
   }
 
   const link = values.videoLink.trim();
@@ -254,6 +262,9 @@ export function InfluencerForm() {
   const [turnstileToken, setTurnstileToken] = React.useState<string | null>(
     null
   );
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [turnstileResetKey, setTurnstileResetKey] = React.useState(0);
   const [cities, setCities] = React.useState<string[]>([]);
   const [citiesStatus, setCitiesStatus] = React.useState<
     "idle" | "loading" | "ready" | "error"
@@ -453,8 +464,10 @@ export function InfluencerForm() {
       }
     : linkPreview;
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (submitting) return;
 
     if (videoCheck === "checking") {
       const message = "Aguarde a verificação do vídeo antes de enviar.";
@@ -471,17 +484,31 @@ export function InfluencerForm() {
     }
 
     setErrors({});
-    setVideo(null);
-    setVideoMetadata(null);
-    setVideoCheck("idle");
+    setSubmitError(null);
+    setSubmitting(true);
 
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = null;
+    try {
+      await submitInfluencer(values, video?.file ?? null, turnstileToken);
+
+      setVideo(null);
+      setVideoMetadata(null);
+      setVideoCheck("idle");
+      setVideoFormat(null);
+
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+
+      setSubmitted(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+      setSubmitError(getApiErrorMessage(error));
+      setTurnstileToken(null);
+      setTurnstileResetKey((key) => key + 1);
+    } finally {
+      setSubmitting(false);
     }
-
-    setSubmitted(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleReset = () => {
@@ -501,6 +528,8 @@ export function InfluencerForm() {
     setVideoCheck("idle");
     setVideoFormat(null);
     setTurnstileToken(null);
+    setSubmitting(false);
+    setSubmitError(null);
     setCities([]);
     setCitiesStatus("idle");
     setSubmitted(false);
@@ -686,7 +715,7 @@ export function InfluencerForm() {
                               setField("customNiche", event.target.value)
                             }
                             placeholder="Ex.: artesanato e DIY"
-                            maxLength={60}
+                            maxLength={30}
                             invalid={Boolean(errors.customNiche)}
                           />
                         </Field>
@@ -957,6 +986,7 @@ export function InfluencerForm() {
 
                     <div id={FIELD_IDS.turnstile} className="scroll-mt-24">
                       <Turnstile
+                        resetKey={turnstileResetKey}
                         onVerify={(token) => {
                           setTurnstileToken(token);
                           if (token) clearErrors("turnstile");
@@ -973,13 +1003,22 @@ export function InfluencerForm() {
                     </div>
 
                     <div className="border-t border-black/[0.07] pt-6">
+                      {submitError && (
+                        <p
+                          role="alert"
+                          className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+                        >
+                          {submitError}
+                        </p>
+                      )}
                       <SubmitButton
                         type="submit"
                         icon={ArrowRight}
                         className="w-full sm:w-auto"
-                        disabled={videoCheck === "checking"}
+                        disabled={submitting || videoCheck === "checking"}
+                        aria-busy={submitting}
                       >
-                        Enviar cadastro
+                        {submitting ? "Enviando cadastro..." : "Enviar cadastro"}
                       </SubmitButton>
                       <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
                         <Send className="size-3" />
