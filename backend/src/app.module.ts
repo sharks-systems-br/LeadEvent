@@ -15,7 +15,7 @@ import { CompanyModule } from "./modules/company/company.module.js";
 
 @Module({
     imports: [
-        ConfigModule.forRoot(),
+        ConfigModule.forRoot({ load: [appConfig], isGlobal: true }),
         MikroOrmModule.forRootAsync({
             driver: PostgreSqlDriver,
             imports: [ConfigModule.forFeature(appConfig)],
