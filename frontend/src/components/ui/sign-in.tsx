@@ -1,30 +1,16 @@
 "use client";
 
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import {
   ArrowUpRight,
   Building2,
   ChevronDown,
   LifeBuoy,
-  Play,
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TransitionLink } from "@/components/ui/page-transition";
-
-export interface Testimonial {
-  avatarSrc: string;
-  name: string;
-  handle: string;
-  text: string;
-}
 
 export type Role = "company" | "influencer";
 
@@ -40,10 +26,6 @@ export interface RoleOption {
 interface SignInPageProps {
   title?: React.ReactNode;
   description?: React.ReactNode;
-  videoSrc?: string;
-  videoMobileSrc?: string;
-  videoPosterSrc?: string;
-  testimonials?: Testimonial[];
   roles?: RoleOption[];
   onSelectRole?: (role: Role) => void;
   supportHref?: string;
@@ -63,37 +45,6 @@ const Brand = () => (
     <span className="text-sm font-semibold tracking-tight text-foreground">
       LeadEvent
     </span>
-  </div>
-);
-
-const TestimonialCard = ({
-  testimonial,
-  delay,
-  eager,
-}: {
-  testimonial: Testimonial;
-  delay: string;
-  eager?: boolean;
-}) => (
-  <div
-    className={cn(
-      "animate-testimonial flex w-full items-start gap-3 rounded-3xl border border-white/10 bg-black/35 p-4 backdrop-blur-xl",
-      delay
-    )}
-  >
-    <Image
-      src={testimonial.avatarSrc}
-      width={36}
-      height={36}
-      className="h-9 w-9 shrink-0 rounded-2xl object-cover"
-      alt={testimonial.name}
-      loading={eager ? "eager" : "lazy"}
-    />
-    <div className="text-sm leading-snug">
-      <p className="font-medium text-white">{testimonial.name}</p>
-      <p className="text-xs text-white/50">{testimonial.handle}</p>
-      <p className="mt-1 text-[13px] text-white/75">{testimonial.text}</p>
-    </div>
   </div>
 );
 
@@ -200,115 +151,10 @@ export const SignInPage: React.FC<SignInPageProps> = ({
     </span>
   ),
   description = "Escolha a opção que mais combina com o seu perfil. Empresas para que possam patrocinar o evento, influenciadores interessados em participar.",
-  videoSrc = "/media/leadevent-hero.mp4",
-  videoMobileSrc,
-  videoPosterSrc = "/media/leadevent-hero-poster.jpg",
-  testimonials = [],
   roles = defaultRoles,
   onSelectRole,
   supportHref = "mailto:contato@leadevent.com",
 }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const isVisibleRef = useRef(false);
-  const allowAutoplayRef = useRef(true);
-  const userStartedRef = useRef(false);
-
-  const [blocked, setBlocked] = useState(false);
-
-  const subscribeToViewport = useCallback(
-    (onStoreChange: () => void) => {
-      if (!videoMobileSrc) return () => {};
-      const media = window.matchMedia("(max-width: 1023px)");
-      media.addEventListener("change", onStoreChange);
-      return () => media.removeEventListener("change", onStoreChange);
-    },
-    [videoMobileSrc]
-  );
-  const videoSource = useSyncExternalStore(
-    subscribeToViewport,
-    () =>
-      videoMobileSrc && window.matchMedia("(max-width: 1023px)").matches
-        ? videoMobileSrc
-        : videoSrc,
-    () => undefined
-  );
-
-  const playVideo = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (!video.getAttribute("src")) return;
-    if (!allowAutoplayRef.current && !userStartedRef.current) return;
-
-    video.muted = true;
-    void video.play().catch(() => {
-      setBlocked(true);
-    });
-  }, []);
-
-  const handlePlayClick = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    userStartedRef.current = true;
-    video.muted = true;
-    setBlocked(false);
-    void video.play().catch(() => setBlocked(true));
-  }, []);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-    const connection = (
-      navigator as Navigator & { connection?: { saveData?: boolean } }
-    ).connection;
-    const saveData = Boolean(connection?.saveData);
-    const shouldAutoplay = !reduceMotion && !saveData;
-    allowAutoplayRef.current = shouldAutoplay;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (!entry) return;
-        isVisibleRef.current = entry.isIntersecting;
-
-        if (!entry.isIntersecting) {
-          video.pause();
-          return;
-        }
-
-        if (!shouldAutoplay && !userStartedRef.current) {
-          setBlocked(true);
-          return;
-        }
-
-        playVideo();
-      },
-      { threshold: 0.25 }
-    );
-
-    observer.observe(video);
-
-    const onVisibilityChange = () => {
-      if (!document.hidden && isVisibleRef.current) playVideo();
-    };
-    const onFocus = () => {
-      if (isVisibleRef.current) playVideo();
-    };
-
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("focus", onFocus);
-
-    return () => {
-      observer.disconnect();
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("focus", onFocus);
-    };
-  }, [playVideo, videoSource]);
-
   return (
     <div className="relative flex min-h-[100dvh] w-full flex-col overflow-hidden bg-background font-sans lg:h-[100dvh] lg:flex-row">
       <div
@@ -372,70 +218,16 @@ export const SignInPage: React.FC<SignInPageProps> = ({
         </footer>
       </section>
 
-      <section className="relative order-1 shrink-0 px-6 pt-4 md:px-12 lg:order-2 lg:shrink lg:flex-1 lg:p-4">
-        <div className="animate-hero animate-delay-300 relative aspect-video w-full overflow-hidden rounded-3xl border border-white/10 bg-black lg:aspect-auto lg:h-full">
-          <video
-            ref={videoRef}
-            className="absolute inset-0 h-full w-full object-cover"
-            src={videoSource}
-            poster={videoPosterSrc}
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            onCanPlay={playVideo}
-            aria-hidden="true"
-            tabIndex={-1}
-          />
-
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-black/40" />
-          <div className="absolute inset-0 bg-violet-950/10" />
-          <div className="absolute inset-0 rounded-3xl ring-1 ring-inset ring-white/10" />
-
-          {blocked && (
-            <button
-              type="button"
-              onClick={handlePlayClick}
-              aria-label="Reproduzir vídeo"
-              className="absolute left-1/2 top-1/2 z-20 flex size-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white backdrop-blur-md transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            >
-              <Play className="size-6" />
-            </button>
-          )}
-
-          {testimonials.length > 0 && (
-            <div className="absolute inset-x-0 bottom-0 hidden lg:block">
-              <p className="animate-element animate-delay-900 mb-4 px-8 text-xs font-medium uppercase tracking-[0.2em] text-white/50">
-                Quem já está dentro
-              </p>
-              <div className="flex w-full justify-center gap-4 px-8 pb-8">
-                <div className="w-60">
-                  <TestimonialCard
-                    testimonial={testimonials[0]}
-                    delay="animate-delay-1000"
-                    eager
-                  />
-                </div>
-                {testimonials[1] && (
-                  <div className="hidden w-60 xl:block">
-                    <TestimonialCard
-                      testimonial={testimonials[1]}
-                      delay="animate-delay-1200"
-                    />
-                  </div>
-                )}
-                {testimonials[2] && (
-                  <div className="hidden w-60 2xl:block">
-                    <TestimonialCard
-                      testimonial={testimonials[2]}
-                      delay="animate-delay-1400"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+      <section className="relative order-1 flex shrink-0 items-center justify-center px-6 pt-4 md:px-12 lg:order-2 lg:shrink lg:flex-1 lg:p-4">
+        <Image
+          src="/media/leadevent-hero.jpg"
+          alt="Feijoada dos Influenciadores — 4ª edição"
+          width={1080}
+          height={1440}
+          priority
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          className="animate-hero animate-delay-300 h-auto w-full rounded-3xl border border-white/10 object-contain lg:h-auto lg:w-auto lg:max-h-full lg:max-w-full"
+        />
       </section>
     </div>
   );

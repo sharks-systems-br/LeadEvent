@@ -148,14 +148,6 @@
   }
 }
 
-@keyframes testimonialIn {
-  to {
-    opacity: 1;
-    filter: blur(0px);
-    transform: translateY(0px) scale(1);
-  }
-}
-
 @keyframes softPulse {
   0%,
   100% {
@@ -198,13 +190,6 @@
     }
   }
 
-  .animate-testimonial {
-    opacity: 0;
-    filter: blur(6px);
-    transform: translateY(18px) scale(0.96);
-    animation: testimonialIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  }
-
   .animate-soft-pulse {
     animation: softPulse 2.4s ease-in-out infinite;
   }
@@ -229,21 +214,6 @@
   }
   .animate-delay-700 {
     animation-delay: 700ms;
-  }
-  .animate-delay-800 {
-    animation-delay: 800ms;
-  }
-  .animate-delay-900 {
-    animation-delay: 900ms;
-  }
-  .animate-delay-1000 {
-    animation-delay: 1000ms;
-  }
-  .animate-delay-1200 {
-    animation-delay: 1200ms;
-  }
-  .animate-delay-1400 {
-    animation-delay: 1400ms;
   }
 
   .bg-grid {
@@ -285,8 +255,7 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-element,
   .animate-hero,
-  .animate-slide-right,
-  .animate-testimonial {
+  .animate-slide-right {
     animation-duration: 0.01ms;
   }
 
