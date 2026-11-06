@@ -1,0 +1,1391 @@
+
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "LeadEvent API",
+    "version": "1.0.0",
+    "description": "Contrato do painel de cadastros do LeadEvent. Os exemplos de Company e Influencer são os mesmos usados pelo frontend em modo demonstração. Rotas marcadas com x-status: planned ainda não existem no backend.",
+    "contact": {
+      "name": "SSB - Sharks Systems Brazil"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5050",
+      "description": "Ambiente local"
+    }
+  ],
+  "x-pending": {
+    "auth": "O login atual redireciona sem token. A intenção é proteger as rotas do painel com bearerAuth.",
+    "pagination": "Os GETs retornam a lista completa. Paginação e filtros são aplicados no frontend e não enviam query params.",
+    "status": "Aprovar ou recusar altera apenas o estado local. O backend precisa de status persistido e das rotas PATCH de status."
+  },
+  "tags": [
+    {
+      "name": "Empresas",
+      "description": "Cadastros de empresas patrocinadoras."
+    },
+    {
+      "name": "Influencers",
+      "description": "Cadastros de creators."
+    },
+    {
+      "name": "Arquivos",
+      "description": "Upload temporário de vídeo."
+    }
+  ],
+  "paths": {
+    "/companies": {
+      "get": {
+        "tags": [
+          "Empresas"
+        ],
+        "operationId": "listCompanies",
+        "summary": "Lista os cadastros de empresas",
+        "description": "Retorna todos os cadastros, do mais recente para o mais antigo. O campo status é opcional na resposta; quando ausente, o frontend assume PENDING.",
+        "x-status": "implemented",
+        "responses": {
+          "200": {
+            "description": "Lista de empresas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Company"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Empresas"
+        ],
+        "operationId": "createCompany",
+        "summary": "Registra uma empresa",
+        "description": "Recebe o payload do formulário de empresa. O Turnstile é validado pelo header cf-turnstile-response quando habilitado.",
+        "x-status": "implemented",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCompanyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cadastro criado"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/companies/{id}": {
+      "get": {
+        "tags": [
+          "Empresas"
+        ],
+        "operationId": "getCompany",
+        "summary": "Busca uma empresa pelo id",
+        "x-status": "implemented",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Empresa encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/companies/{id}/status": {
+      "patch": {
+        "tags": [
+          "Empresas"
+        ],
+        "operationId": "updateCompanyStatus",
+        "summary": "Aprova ou recusa uma empresa",
+        "description": "Altera o status de triagem do cadastro. O frontend ainda não chama esta rota; hoje a mudança é local.",
+        "x-status": "planned",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLeadStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status atualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/influencers": {
+      "get": {
+        "tags": [
+          "Influencers"
+        ],
+        "operationId": "listInfluencers",
+        "summary": "Lista os cadastros de influencers",
+        "description": "Retorna todos os cadastros, do mais recente para o mais antigo. O campo status é opcional na resposta; quando ausente, o frontend assume PENDING.",
+        "x-status": "implemented",
+        "responses": {
+          "200": {
+            "description": "Lista de influencers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Influencer"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Influencers"
+        ],
+        "operationId": "createInfluencer",
+        "summary": "Registra um influencer",
+        "description": "Recebe o payload do formulário. O vídeo chega por filePath, após POST /files, ou por fileUrl quando o link é externo. O Turnstile é validado pelo header cf-turnstile-response quando habilitado.",
+        "x-status": "implemented",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInfluencerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cadastro criado"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/influencers/{id}": {
+      "get": {
+        "tags": [
+          "Influencers"
+        ],
+        "operationId": "getInfluencer",
+        "summary": "Busca um influencer pelo id",
+        "x-status": "implemented",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Influencer encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Influencer"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/influencers/{id}/status": {
+      "patch": {
+        "tags": [
+          "Influencers"
+        ],
+        "operationId": "updateInfluencerStatus",
+        "summary": "Aprova ou recusa um influencer",
+        "description": "Altera o status de triagem do cadastro. O frontend ainda não chama esta rota; hoje a mudança é local.",
+        "x-status": "planned",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLeadStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status atualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Influencer"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/files": {
+      "post": {
+        "tags": [
+          "Arquivos"
+        ],
+        "operationId": "uploadFile",
+        "summary": "Envia um vídeo temporário",
+        "description": "Recebe o arquivo e devolve o filePath usado em POST /influencers. Limite de 80 MB e 2 minutos, validados no frontend quando possível.",
+        "x-status": "implemented",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Arquivo aceito",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Autenticação planejada para as rotas do painel. Ainda não implementada no frontend nem no backend."
+      }
+    },
+    "parameters": {
+      "Id": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Identificador UUID do cadastro.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "Erro da API",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "LeadStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "APPROVED",
+          "REJECTED"
+        ],
+        "description": "Status de triagem do cadastro."
+      },
+      "Disponibility": {
+        "type": "string",
+        "enum": [
+          "MORNING",
+          "AFTERNOON",
+          "END_OF_THE_DAY",
+          "ANY_TIME",
+          "BY_EMAIL"
+        ],
+        "description": "Disponibilidade para reunião informada pela empresa."
+      },
+      "FollowerRange": {
+        "type": "string",
+        "enum": [
+          "_UP_TO_10K",
+          "_10K_TO_50K",
+          "_50K_TO_100K",
+          "_100K_TO_500K",
+          "_500K_TO_1M",
+          "_GT_1M"
+        ],
+        "description": "Faixa de seguidores informada pelo influencer."
+      },
+      "SocialMedia": {
+        "type": "string",
+        "enum": [
+          "INSTAGRAM",
+          "TIKTOK",
+          "YOUTUBE",
+          "FACEBOOK",
+          "LINKEDIN",
+          "TWITCH",
+          "PINTEREST",
+          "THREADS",
+          "SITE",
+          "X"
+        ],
+        "description": "Plataforma de uma rede social adicional."
+      },
+      "PartnershipFormat": {
+        "type": "object",
+        "required": [
+          "format"
+        ],
+        "properties": {
+          "format": {
+            "type": "string",
+            "maxLength": 30,
+            "description": "Rótulo do formato de parceria.",
+            "examples": [
+              "Post patrocinado"
+            ]
+          }
+        }
+      },
+      "SocialMediaLink": {
+        "type": "object",
+        "required": [
+          "socialMedia",
+          "link"
+        ],
+        "properties": {
+          "socialMedia": {
+            "$ref": "#/components/schemas/SocialMedia"
+          },
+          "link": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "Company": {
+        "type": "object",
+        "required": [
+          "id",
+          "tradeName",
+          "cnpj",
+          "contactEmail",
+          "personName",
+          "socialMedia",
+          "reason",
+          "disponibility",
+          "partnershipFormats",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "tradeName": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "cnpj": {
+            "type": "string",
+            "pattern": "^\\d{14}$",
+            "description": "Somente dígitos.",
+            "examples": [
+              "12345678000190"
+            ]
+          },
+          "contactEmail": {
+            "type": "string",
+            "format": "email"
+          },
+          "personName": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "socialMedia": {
+            "type": "string",
+            "description": "Instagram, @handle ou site informado no cadastro."
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 600
+          },
+          "disponibility": {
+            "$ref": "#/components/schemas/Disponibility"
+          },
+          "partnershipFormats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PartnershipFormat"
+            }
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LeadStatus"
+              }
+            ],
+            "default": "PENDING",
+            "description": "Opcional na resposta atual; o frontend assume PENDING quando ausente."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "examples": [
+          {
+            "id": "demo-company-01",
+            "tradeName": "Café Aurora",
+            "cnpj": "12345678000190",
+            "contactEmail": "contato@cafeaurora.com.br",
+            "personName": "Ana Ribeiro",
+            "socialMedia": "cafeaurora.com.br",
+            "reason": "Queremos apresentar nossa nova linha de cafés especiais e fechar parcerias com criadores de conteúdo de lifestyle.",
+            "disponibility": "AFTERNOON",
+            "partnershipFormats": [
+              {
+                "format": "Post patrocinado"
+              },
+              {
+                "format": "Cupom"
+              }
+            ],
+            "createdAt": "2026-11-05T12:00:00.000Z",
+            "status": "APPROVED"
+          },
+          {
+            "id": "demo-company-02",
+            "tradeName": "TechNova Sistemas",
+            "cnpj": "23456789000181",
+            "contactEmail": "marketing@technova.com.br",
+            "personName": "Bruno Almeida",
+            "socialMedia": "technova.com.br",
+            "reason": "Buscamos influenciadores de tecnologia para divulgar nosso aplicativo de gestão financeira no evento.",
+            "disponibility": "MORNING",
+            "partnershipFormats": [
+              {
+                "format": "Evento"
+              },
+              {
+                "format": "Palestra"
+              }
+            ],
+            "createdAt": "2026-11-04T12:00:00.000Z",
+            "status": "PENDING"
+          },
+          {
+            "id": "demo-company-03",
+            "tradeName": "Verde Vida Cosméticos",
+            "cnpj": "34567890000172",
+            "contactEmail": "parcerias@verdevida.com.br",
+            "personName": "Carla Souza",
+            "socialMedia": "@verdevida",
+            "reason": "Lançamento de uma linha vegana e queremos criadores de beleza para resenhas e unboxing.",
+            "disponibility": "ANY_TIME",
+            "partnershipFormats": [
+              {
+                "format": "Post patrocinado"
+              },
+              {
+                "format": "Unboxing"
+              }
+            ],
+            "createdAt": "2026-11-03T12:00:00.000Z",
+            "status": "REJECTED"
+          },
+          {
+            "id": "demo-company-04",
+            "tradeName": "Padaria Pão de Ouro",
+            "cnpj": "45678901000163",
+            "contactEmail": "atendimento@paodeouro.com.br",
+            "personName": "Diego Martins",
+            "socialMedia": "paodeouro.com.br",
+            "reason": "Queremos divulgar o café da manhã promocional com influenciadores locais da zona sul.",
+            "disponibility": "END_OF_THE_DAY",
+            "partnershipFormats": [
+              {
+                "format": "Cupom"
+              }
+            ],
+            "createdAt": "2026-11-02T12:00:00.000Z",
+            "status": "PENDING"
+          },
+          {
+            "id": "demo-company-05",
+            "tradeName": "FitMax Academia",
+            "cnpj": "56789012000154",
+            "contactEmail": "contato@fitmax.com.br",
+            "personName": "Elisa Prado",
+            "socialMedia": "fitmax.com.br",
+            "reason": "Procuramos influenciadores fitness para uma ação de inauguração com aulas abertas e sorteios.",
+            "disponibility": "MORNING",
+            "partnershipFormats": [
+              {
+                "format": "Evento"
+              },
+              {
+                "format": "Desconto"
+              }
+            ],
+            "createdAt": "2026-11-01T12:00:00.000Z",
+            "status": "APPROVED"
+          },
+          {
+            "id": "demo-company-06",
+            "tradeName": "Livraria Horizonte",
+            "cnpj": "67890123000145",
+            "contactEmail": "eventos@livrariahorizonte.com.br",
+            "personName": "Felipe Nunes",
+            "socialMedia": "@livrariahorizonte",
+            "reason": "Estamos organizando um clube de leitura e queremos book creators para divulgar o encontro.",
+            "disponibility": "BY_EMAIL",
+            "partnershipFormats": [
+              {
+                "format": "Post patrocinado"
+              }
+            ],
+            "createdAt": "2026-10-31T12:00:00.000Z",
+            "status": "PENDING"
+          },
+          {
+            "id": "demo-company-07",
+            "tradeName": "Studio Lume Arquitetura",
+            "cnpj": "78901234000136",
+            "contactEmail": "contato@studiolume.com.br",
+            "personName": "Gabriela Reis",
+            "socialMedia": "studiolume.com.br",
+            "reason": "Interesse em uma parceria pontual para mostrar nosso novo showroom em um tour com criadores.",
+            "disponibility": "AFTERNOON",
+            "partnershipFormats": [
+              {
+                "format": "Evento"
+              }
+            ],
+            "createdAt": "2026-10-30T12:00:00.000Z",
+            "status": "REJECTED"
+          },
+          {
+            "id": "demo-company-08",
+            "tradeName": "PetCare Express",
+            "cnpj": "89012345000127",
+            "contactEmail": "marketing@petcareexpress.com.br",
+            "personName": "Henrique Lima",
+            "socialMedia": "petcareexpress.com.br",
+            "reason": "Queremos divulgar o plano de saúde pet com influenciadores de animais e rotina em casa.",
+            "disponibility": "ANY_TIME",
+            "partnershipFormats": [
+              {
+                "format": "Cupom"
+              },
+              {
+                "format": "Post patrocinado"
+              }
+            ],
+            "createdAt": "2026-10-29T12:00:00.000Z",
+            "status": "APPROVED"
+          },
+          {
+            "id": "demo-company-09",
+            "tradeName": "Moda Bela Vista",
+            "cnpj": "90123456000118",
+            "contactEmail": "parcerias@modabelavista.com.br",
+            "personName": "Isabela Castro",
+            "socialMedia": "@modabelavista",
+            "reason": "Coleção de verão pronta para lançamento. Buscamos criadores de moda para provador e looks.",
+            "disponibility": "MORNING",
+            "partnershipFormats": [
+              {
+                "format": "Provador"
+              },
+              {
+                "format": "Unboxing"
+              }
+            ],
+            "createdAt": "2026-10-28T12:00:00.000Z",
+            "status": "PENDING"
+          },
+          {
+            "id": "demo-company-10",
+            "tradeName": "Sabor do Campo",
+            "cnpj": "01234567000109",
+            "contactEmail": "contato@sabordocampo.com.br",
+            "personName": "João Pedro Alves",
+            "socialMedia": "sabordocampo.com.br",
+            "reason": "Estamos levando nossos produtos para o evento e queremos uma ação de degustação guiada.",
+            "disponibility": "END_OF_THE_DAY",
+            "partnershipFormats": [
+              {
+                "format": "Degustação"
+              },
+              {
+                "format": "Evento"
+              }
+            ],
+            "createdAt": "2026-10-27T12:00:00.000Z",
+            "status": "APPROVED"
+          },
+          {
+            "id": "demo-company-11",
+            "tradeName": "CloudBridge Consultoria",
+            "cnpj": "11223344000155",
+            "contactEmail": "contato@cloudbridge.com.br",
+            "personName": "Larissa Freitas",
+            "socialMedia": "cloudbridge.com.br",
+            "reason": "Procuramos parceiros para divulgar nosso webinar de transformação digital para pequenas empresas.",
+            "disponibility": "BY_EMAIL",
+            "partnershipFormats": [
+              {
+                "format": "Palestra"
+              }
+            ],
+            "createdAt": "2026-10-26T12:00:00.000Z",
+            "status": "REJECTED"
+          },
+          {
+            "id": "demo-company-12",
+            "tradeName": "Ótica Visão Clara",
+            "cnpj": "22334455000144",
+            "contactEmail": "atendimento@oticavisaoclara.com.br",
+            "personName": "Marcos Vieira",
+            "socialMedia": "@oticavisaoclara",
+            "reason": "Queremos divulgar a nova coleção de armações com influenciadores de moda e lifestyle.",
+            "disponibility": "AFTERNOON",
+            "partnershipFormats": [
+              {
+                "format": "Cupom"
+              },
+              {
+                "format": "Post patrocinado"
+              }
+            ],
+            "createdAt": "2026-10-25T12:00:00.000Z",
+            "status": "PENDING"
+          },
+          {
+            "id": "demo-company-13",
+            "tradeName": "Raízes Orgânicos",
+            "cnpj": "33445566000133",
+            "contactEmail": "parcerias@raizesorganicos.com.br",
+            "personName": "Natália Campos",
+            "socialMedia": "raizesorganicos.com.br",
+            "reason": "Buscamos criadores de gastronomia saudável para uma campanha de assinatura de cestas orgânicas.",
+            "disponibility": "MORNING",
+            "partnershipFormats": [
+              {
+                "format": "Post patrocinado"
+              },
+              {
+                "format": "Cupom"
+              }
+            ],
+            "createdAt": "2026-10-24T12:00:00.000Z",
+            "status": "PENDING"
+          },
+          {
+            "id": "demo-company-14",
+            "tradeName": "Mundo Móvel",
+            "cnpj": "44556677000122",
+            "contactEmail": "marketing@mundomovel.com.br",
+            "personName": "Otávio Ramos",
+            "socialMedia": "mundomovel.com.br",
+            "reason": "Queremos mostrar a nova linha de móveis planejados em uma série de vídeos com creators de casa.",
+            "disponibility": "ANY_TIME",
+            "partnershipFormats": [
+              {
+                "format": "Vídeo"
+              }
+            ],
+            "createdAt": "2026-10-23T12:00:00.000Z",
+            "status": "REJECTED"
+          }
+        ]
+      },
+      "Influencer": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "instagram",
+          "phone",
+          "reason",
+          "niche",
+          "videoUrl",
+          "state",
+          "city",
+          "followerRange",
+          "socialMedias",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "instagram": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Handle sem @.",
+            "examples": [
+              "marianacosta"
+            ]
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 20,
+            "description": "Somente dígitos, com DDD.",
+            "examples": [
+              "11988881001"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 600
+          },
+          "niche": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "videoUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Link do YouTube, Vimeo ou Google Drive. Uploads internos geram uma URL de preview do Drive."
+          },
+          "state": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "followerRange": {
+            "$ref": "#/components/schemas/FollowerRange"
+          },
+          "socialMedias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SocialMediaLink"
+            }
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LeadStatus"
+              }
+            ],
+            "default": "PENDING",
+            "description": "Opcional na resposta atual; o frontend assume PENDING quando ausente."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "examples": [
+          {
+            "id": "demo-influencer-01",
+            "name": "Mariana Costa",
+            "instagram": "marianacosta",
+            "phone": "11988881001",
+            "reason": "Crio conteúdo de lifestyle e viagens e quero participar do LeadEvent para conhecer marcas do setor.",
+            "niche": "Lifestyle",
+            "videoUrl": "https://youtu.be/KdLU2krESXM?si=l7FqQ1D5R--I1Tz-",
+            "state": "SP",
+            "city": "São Paulo",
+            "followerRange": "_50K_TO_100K",
+            "socialMedias": [
+              {
+                "socialMedia": "INSTAGRAM",
+                "link": "https://instagram.com/marianacosta"
+              },
+              {
+                "socialMedia": "TIKTOK",
+                "link": "https://tiktok.com/@marianacosta"
+              }
+            ],
+            "createdAt": "2026-11-05T12:00:00.000Z",
+            "status": "APPROVED"
+          },
+          {
+            "id": "demo-influencer-02",
+            "name": "Lucas Ferreira",
+            "instagram": "lucasferreira.fit",
+            "phone": "21988881002",
+            "reason": "Sou personal trainer e produzo conteúdo de treino e alimentação para uma audiência engajada.",
+            "niche": "Fitness",
+            "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+            "state": "RJ",
+            "city": "Rio de Janeiro",
+            "followerRange": "_10K_TO_50K",
+            "socialMedias": [
+              {
+                "socialMedia": "INSTAGRAM",
+                "link": "https://instagram.com/lucasferreira.fit"
+              },
+              {
+                "socialMedia": "YOUTUBE",
+                "link": "https://youtube.com/@lucasferreirafit"
+              }
+            ],
+            "createdAt": "2026-11-04T12:00:00.000Z",
+            "status": "PENDING"
+          },
+          {
+            "id": "demo-influencer-03",
+            "name": "Beatriz Alves",
+            "instagram": "bia.alves",
+            "phone": "31988881003",
+            "reason": "Trabalho com beleza e maquiagem e já fiz campanhas para marcas de cosméticos nacionais.",
+            "niche": "Beleza",
+            "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+            "state": "MG",
+            "city": "Belo Horizonte",
+            "followerRange": "_100K_TO_500K",
+            "socialMedias": [
+              {
+                "socialMedia": "INSTAGRAM",
+                "link": "https://instagram.com/bia.alves"
+              },
+              {
+                "socialMedia": "TIKTOK",
+                "link": "https://tiktok.com/@bia.alves"
+              },
+              {
+                "socialMedia": "YOUTUBE",
+                "link": "https://youtube.com/@biaalves"
+              }
+            ],
+            "createdAt": "2026-11-03T12:00:00.000Z",
+            "status": "APPROVED"
+          },
+          {
+            "id": "demo-influencer-04",
+            "name": "Rafael Souza",
+            "instagram": "rafa.gamer",
+            "phone": "41988881004",
+            "reason": "Faço lives de games e quero divulgar marcas de periféricos e plataformas de streaming.",
+            "niche": "Games",
+            "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+            "state": "PR",
+            "city": "Curitiba",
+            "followerRange": "_50K_TO_100K",
+            "socialMedias": [
+              {
+                "socialMedia": "TWITCH",
+                "link": "https://twitch.tv/rafagamer"
+              },
+              {
+                "socialMedia": "INSTAGRAM",
+                "link": "https://instagram.com/rafa.gamer"
+              }
+            ],
+            "createdAt": "2026-11-02T12:00:00.000Z",
+            "status": "REJECTED"
+          },
+          {
+            "id": "demo-influencer-05",
+            "name": "Camila Rocha",
+            "instagram": "camilarocha",
+            "phone": "71988881005",
+            "reason": "Compartilho roteiros de viagem pelo Nordeste e quero firmar parcerias com hotéis e agências.",
+            "niche": "Viagens",
+            "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+            "state": "BA",
+            "city": "Salvador",
+            "followerRange": "_10K_TO_50K",
+            "socialMedias": [
+              {
+                "socialMedia": "INSTAGRAM",
+                "link": "https://instagram.com/camilarocha"
+              },
+              {
+                "socialMedia": "SITE",
+                "link": "https://camilarocha.com.br"
+              }
+            ],
+            "createdAt": "2026-11-01T12:00:00.000Z",
+            "status": "PENDING"
+          },
+          {
+            "id": "demo-influencer-06",
+            "name": "Thiago Mendes",
+            "instagram": "thiagomendes",
+            "phone": "51988881006",
+            "reason": "Receitas rápidas para o dia a dia são o foco do meu perfil. Quero parcerias com marcas de alimentos.",
+            "niche": "Culinária",
+            "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+            "state": "RS",
+            "city": "Porto Alegre",
+            "followerRange": "_UP_TO_10K",
+            "socialMedias": [
+              {
+                "socialMedia": "INSTAGRAM",
+                "link": "https://instagram.com/thiagomendes"
+              },
+              {
+                "socialMedia": "TIKTOK",
+                "link": "https://tiktok.com/@thiagomendes"
+              }
+            ],
+            "createdAt": "2026-10-31T12:00:00.000Z",
+            "status": "PENDING"
+          },
+          {
+            "id": "demo-influencer-07",
+            "name": "Juliana Pires",
+            "instagram": "ju.pires",
+            "phone": "19988881007",
+            "reason": "Sou criadora de moda e tenho forte presença em campanhas de lançamento de coleções.",
+            "niche": "Moda",
+            "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+            "state": "SP",
+            "city": "Campinas",
+            "followerRange": "_500K_TO_1M",
+            "socialMedias": [
+              {
+                "socialMedia": "INSTAGRAM",
+                "link": "https://instagram.com/ju.pires"
+              },
+              {
+                "socialMedia": "PINTEREST",
+                "link": "https://pinterest.com/jupires"
+              }
+            ],
+            "createdAt": "2026-10-30T12:00:00.000Z",
+            "status": "APPROVED"
+          },
+          {
+            "id": "demo-influencer-08",
+            "name": "Gabriel Rocha",
+            "instagram": "gabriel.rocha",
+            "phone": "48988881008",
+            "reason": "Analiso gadgets e aplicativos no meu canal e quero participar de eventos de tecnologia.",
+            "niche": "Tecnologia",
+            "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+            "state": "SC",
+            "city": "Florianópolis",
+            "followerRange": "_10K_TO_50K",
+            "socialMedias": [
+              {
+                "socialMedia": "YOUTUBE",
+                "link": "https://youtube.com/@gabrielrocha"
+              },
+              {
+                "socialMedia": "INSTAGRAM",
+                "link": "https://instagram.com/gabriel.rocha"
+              }
+            ],
+            "createdAt": "2026-10-29T12:00:00.000Z",
+            "status": "REJECTED"
+          },
+          {
+            "id": "demo-influencer-09",
+            "name": "Larissa Gomes",
+            "instagram": "lari.gomes",
+            "phone": "81988881009",
+            "reason": "Falo sobre maternidade real e rotina com bebês. Busco marcas de enxoval, higiene e alimentação.",
+            "niche": "Maternidade",
+            "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+            "state": "PE",
+            "city": "Recife",
+            "followerRange": "_50K_TO_100K",
+            "socialMedias": [
+              {
+                "socialMedia": "INSTAGRAM",
+                "link": "https://instagram.com/lari.gomes"
+              },
+              {
+                "socialMedia": "YOUTUBE",
+                "link": "https://youtube.com/@larigomes"
+              }
+            ],
+            "createdAt": "2026-10-28T12:00:00.000Z",
+            "status": "PENDING"
+          },
+          {
+            "id": "demo-influencer-10",
+            "name": "Pedro Henrique",
+            "instagram": "pedrohenrique",
+            "phone": "85988881010",
+            "reason": "Produzo esquetes de humor e quero levar marcas para o público jovem com ações leves e criativas.",
+            "niche": "Humor",
+            "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+            "state": "CE",
+            "city": "Fortaleza",
+            "followerRange": "_GT_1M",
+            "socialMedias": [
+              {
+                "socialMedia": "INSTAGRAM",
+                "link": "https://instagram.com/pedrohenrique"
+              },
+              {
+                "socialMedia": "TIKTOK",
+                "link": "https://tiktok.com/@pedrohenrique"
+              },
+              {
+                "socialMedia": "X",
+                "link": "https://x.com/pedrohenrique"
+              }
+            ],
+            "createdAt": "2026-10-27T12:00:00.000Z",
+            "status": "APPROVED"
+          },
+          {
+            "id": "demo-influencer-11",
+            "name": "Sofia Martins",
+            "instagram": "sofia.martins",
+            "phone": "62988881011",
+            "reason": "Dança e coreografias são o centro do meu conteúdo. Tenho interesse em campanhas de moda e música.",
+            "niche": "Dança",
+            "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+            "state": "GO",
+            "city": "Goiânia",
+            "followerRange": "_100K_TO_500K",
+            "socialMedias": [
+              {
+                "socialMedia": "INSTAGRAM",
+                "link": "https://instagram.com/sofia.martins"
+              },
+              {
+                "socialMedia": "TIKTOK",
+                "link": "https://tiktok.com/@sofia.martins"
+              }
+            ],
+            "createdAt": "2026-10-26T12:00:00.000Z",
+            "status": "PENDING"
+          },
+          {
+            "id": "demo-influencer-12",
+            "name": "Vinícius Barbosa",
+            "instagram": "vini.barbosa",
+            "phone": "11988881012",
+            "reason": "Conteúdo automotivo com testes e bastidores de oficina. Quero aproximar marcas do público jovem.",
+            "niche": "Automotivo",
+            "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+            "state": "SP",
+            "city": "São Paulo",
+            "followerRange": "_10K_TO_50K",
+            "socialMedias": [
+              {
+                "socialMedia": "INSTAGRAM",
+                "link": "https://instagram.com/vini.barbosa"
+              },
+              {
+                "socialMedia": "YOUTUBE",
+                "link": "https://youtube.com/@vinibarbosa"
+              }
+            ],
+            "createdAt": "2026-10-25T12:00:00.000Z",
+            "status": "PENDING"
+          },
+          {
+            "id": "demo-influencer-13",
+            "name": "Alice Nogueira",
+            "instagram": "alice.nogueira",
+            "phone": "27988881013",
+            "reason": "Compartilho hábitos sustentáveis e consumo consciente. Prefiro parcerias com marcas de impacto.",
+            "niche": "Sustentabilidade",
+            "videoUrl": "",
+            "state": "ES",
+            "city": "Vitória",
+            "followerRange": "_UP_TO_10K",
+            "socialMedias": [
+              {
+                "socialMedia": "INSTAGRAM",
+                "link": "https://instagram.com/alice.nogueira"
+              },
+              {
+                "socialMedia": "LINKEDIN",
+                "link": "https://linkedin.com/in/alicenogueira"
+              }
+            ],
+            "createdAt": "2026-10-24T12:00:00.000Z",
+            "status": "REJECTED"
+          }
+        ]
+      },
+      "CreateCompanyRequest": {
+        "type": "object",
+        "required": [
+          "tradeName",
+          "cnpj",
+          "contactEmail",
+          "personName",
+          "socialMedia",
+          "reason",
+          "partnershipFormats",
+          "confirmContact",
+          "disponibility"
+        ],
+        "properties": {
+          "tradeName": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "cnpj": {
+            "type": "string",
+            "pattern": "^\\d{14}$"
+          },
+          "contactEmail": {
+            "type": "string",
+            "format": "email"
+          },
+          "personName": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "socialMedia": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 600
+          },
+          "partnershipFormats": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "maxLength": 30
+            }
+          },
+          "confirmContact": {
+            "const": true
+          },
+          "disponibility": {
+            "$ref": "#/components/schemas/Disponibility"
+          }
+        }
+      },
+      "CreateInfluencerRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "instagram",
+          "phone",
+          "reason",
+          "niche",
+          "state",
+          "city",
+          "followerRange",
+          "confirmContact"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "instagram": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 600
+          },
+          "niche": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "state": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "followerRange": {
+            "$ref": "#/components/schemas/FollowerRange"
+          },
+          "confirmContact": {
+            "const": true
+          },
+          "socialMedias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SocialMediaLink"
+            }
+          },
+          "filePath": {
+            "type": "string",
+            "description": "Caminho temporário devolvido por POST /files."
+          },
+          "fileUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Link externo de vídeo. Usado quando não há filePath."
+          }
+        }
+      },
+      "UpdateLeadStatusRequest": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/LeadStatus"
+          }
+        }
+      },
+      "FileUploadResponse": {
+        "type": "object",
+        "required": [
+          "filePath"
+        ],
+        "properties": {
+          "filePath": {
+            "type": "string"
+          }
+        },
+        "examples": [
+          {
+            "filePath": "tmp/2f1c9a7e-video.mp4"
+          }
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "statusCode",
+          "message"
+        ],
+        "properties": {
+          "statusCode": {
+            "type": "number"
+          },
+          "message": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
