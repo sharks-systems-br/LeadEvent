@@ -121,7 +121,7 @@ function SignInForm({
 
       <div className="mt-8 grid gap-5">
         <div className="grid gap-2">
-          <Label htmlFor={emailId}>E-mail</Label>
+          <Label htmlFor={emailId}>Username</Label>
           <div className="relative">
             <Mail
               aria-hidden="true"
@@ -129,10 +129,10 @@ function SignInForm({
             />
             <Input
               id={emailId}
-              name="email"
-              type="email"
-              placeholder="voce@empresa.com"
-              autoComplete="email"
+              name="username"
+              type="string"
+              placeholder="username"
+              autoComplete="username"
               className="pl-10"
               required
             />
@@ -146,25 +146,6 @@ function SignInForm({
           autoComplete="current-password"
           required
         />
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
-            <input
-              type="checkbox"
-              name="remember"
-              className="size-4 rounded border-black/20 accent-brand"
-            />
-            Lembrar por 30 dias
-          </label>
-
-          <button
-            type="button"
-            onClick={onForgotPassword}
-            className="text-sm font-medium text-brand transition-colors hover:text-brand/80 hover:underline"
-          >
-            Esqueceu a senha?
-          </button>
-        </div>
 
         <Button
           type="submit"
