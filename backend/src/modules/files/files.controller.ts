@@ -15,7 +15,7 @@ export class FilesController {
     @Post()
     @Throttle({
         short: { limit: 1, ttl: seconds(1) },
-        long: { limit: 10, ttl: minutes(15) },
+        long: { limit: 5, ttl: minutes(15) },
     })
     @UseInterceptors(
         FileInterceptor("file", {

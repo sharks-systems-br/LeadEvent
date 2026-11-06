@@ -45,7 +45,7 @@ export class DriveService extends StorageService {
                 embeds: [
                     {
                         title: `WARNING [LeadEvent]: Quantidade relevante de vídeos subidos para o Drive`,
-                        description: `${currentCount} vídeos foram subidos para o Drive nesta hora: ${hour} (TESTE).`,
+                        description: `${currentCount} vídeos foram subidos para o Drive nesta hora: ${hour}.`,
                         color: 0xffa500,
                         footer: {
                             text: `LeadEvent - ${this.appConfiguration.enviroment}`,
