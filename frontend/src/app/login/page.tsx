@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AuthUI } from "@/components/ui/auth-ui";
+import { LoginView } from "@/components/auth/login-view";
 
 export const metadata: Metadata = {
   title: "Entrar — LeadEvent",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function LoginPage() {
-  return <AuthUI />;
+  return <LoginView />;
 }
