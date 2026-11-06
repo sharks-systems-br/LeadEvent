@@ -1,11 +1,13 @@
-import { BadRequestException, ConflictException, Injectable } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { CreateInfluencerDto } from "./dto/create-influencer.dto.js";
-import { UpdateInfluencerDto } from "./dto/update-influencer.dto.js";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Influencer } from "./entities/influencer.entity.js";
 import { EntityManager, EntityRepository } from "@mikro-orm/postgresql";
 import { StorageService } from "../../infra/storage/storage.service.js";
 import { FilesService } from "../files/files.service.js";
+import { CountsResponseDto } from "../../common/dto/counts-response.dto.js";
+import { SearchInfluencerQueryDto } from "./dto/search-influencer-query.dto.js";
+import { UpdateApprovalStatusDto } from "../../common/dto/update-approval-status.dto.js";
 
 @Injectable()
 export class InfluencerService {
@@ -22,14 +24,12 @@ export class InfluencerService {
         if (exists) throw new ConflictException("Já existe um influencer com esse instagram.");
     }
 
+    private assertExists<T>(entity: T): asserts entity is NonNullable<T> {
+        if (!entity) throw new NotFoundException("Influencer não encontrado.");
+    }
+
     async create(dto: CreateInfluencerDto): Promise<void> {
         const { filePath, fileUrl, confirmContact: _, socialMedias, ...rest } = dto;
-
-        // if (!confirmContact) {
-        //     throw new BadRequestException(
-        //         "Para confirmar seu cadastro, você deve nos autorizar a entrar em contato com você.",
-        //     );
-        // }
 
         if (filePath) {
             await this.filesService.verifyFilePath(filePath);
@@ -68,19 +68,90 @@ export class InfluencerService {
         }
     }
 
-    findAll() {
-        return `This action returns all influencer`;
+    async getCounts(): Promise<CountsResponseDto> {
+        const counts = await this.influencerRepository.countBy("approvalStatus");
+        counts["APPROVED"] ??= 0;
+        counts["PENDING"] ??= 0;
+        counts["REFUSED"] ??= 0;
+
+        return {
+            APPROVED: counts["APPROVED"],
+            PENDING: counts["PENDING"],
+            REFUSED: counts["REFUSED"],
+            total: counts["APPROVED"] + counts["PENDING"] + counts["REFUSED"],
+        };
     }
 
-    findOne(id: number) {
-        return `This action returns a #${id} influencer`;
+    async findAll({
+        page,
+        perPage,
+        approvalStatus,
+        followerRange,
+        niche,
+        state,
+        text,
+    }: SearchInfluencerQueryDto): Promise<Influencer[]> {
+        const ilikeText = text && "%" + text + "%";
+
+        const influencers = await this.influencerRepository.find(
+            {
+                approvalStatus,
+                followerRange,
+                niche,
+                state,
+                ...(ilikeText && {
+                    $or: [
+                        { name: { $ilike: ilikeText } },
+                        { city: { $ilike: ilikeText } },
+                        { instagram: { $ilike: ilikeText } },
+                    ],
+                }),
+            },
+            { limit: perPage, offset: (page - 1) * perPage, populate: ["socialMedias"] },
+        );
+
+        return influencers;
     }
 
-    update(id: number, _dto: UpdateInfluencerDto) {
-        return `This action updates a #${id} influencer`;
+    async findOne(id: string): Promise<Influencer> {
+        const influencer = await this.influencerRepository.findOne(
+            { id, deletedAt: null },
+            { populate: ["socialMedias"] },
+        );
+        this.assertExists(influencer);
+
+        return influencer;
     }
 
-    remove(id: number) {
-        return `This action removes a #${id} influencer`;
+    async recover(id: string): Promise<void> {
+        const influencer = await this.influencerRepository.findOne({ id, deletedAt: { $ne: null } });
+        this.assertExists(influencer);
+
+        influencer.deletedAt = null;
+
+        await this.em.flush();
+    }
+
+    async updateStatus(id: string, dto: UpdateApprovalStatusDto): Promise<Influencer> {
+        const influencer = await this.influencerRepository.findOne(
+            { id, deletedAt: null },
+            { populate: ["socialMedias"] },
+        );
+        this.assertExists(influencer);
+
+        influencer.approvalStatus = dto.approvalStatus;
+
+        await this.em.flush();
+
+        return influencer;
+    }
+
+    async remove(id: string): Promise<void> {
+        const influencer = await this.influencerRepository.findOne({ id, deletedAt: null });
+        this.assertExists(influencer);
+
+        influencer.deletedAt = new Date();
+
+        await this.em.flush();
     }
 }

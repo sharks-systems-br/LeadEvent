@@ -3,7 +3,6 @@ import { BaseEntity } from "../../../common/entities/base.entity.js";
 import { PartnershipFormat } from "./partnership-format.entity.js";
 import { Collection } from "@mikro-orm/core";
 import { Disponibility } from "../enums/disponibility.enum.js";
-import { ApiProperty } from "@nestjs/swagger";
 import { ApprovalStatus } from "../../../common/enums/approval-status.enum.js";
 
 @Entity()
@@ -26,7 +25,6 @@ export class Company extends BaseEntity {
     @Property({ type: "varchar", length: 700 })
     reason: string;
 
-    @ApiProperty({ type: PartnershipFormat, isArray: true })
     @OneToMany(() => PartnershipFormat, p => p.company)
     partnershipFormats = new Collection<PartnershipFormat>(this);
 

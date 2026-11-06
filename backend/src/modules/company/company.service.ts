@@ -94,10 +94,7 @@ export class CompanyService {
     }
 
     async recover(id: string): Promise<void> {
-        const company = await this.companyRepository.findOne(
-            { id, deletedAt: { $ne: null } },
-            { populate: ["partnershipFormats"] },
-        );
+        const company = await this.companyRepository.findOne({ id, deletedAt: { $ne: null } });
         this.assertExists(company);
 
         company.deletedAt = null;
