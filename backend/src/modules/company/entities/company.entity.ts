@@ -29,4 +29,7 @@ export class Company extends BaseEntity {
 
     @Enum({ items: () => Disponibility, nativeEnumName: "Disponibility" })
     disponibility: Disponibility;
+
+    @Property({ nullable: true })
+    deletedAt: Date | null;
 }

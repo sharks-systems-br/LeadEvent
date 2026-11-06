@@ -38,4 +38,7 @@ export class Influencer extends BaseEntity {
 
     @OneToMany(() => InfluencerSocialMedia, sm => sm.influencer)
     socialMedias = new Collection<InfluencerSocialMedia>(this);
+
+    @Property({ nullable: true })
+    deletedAt: Date | null;
 }

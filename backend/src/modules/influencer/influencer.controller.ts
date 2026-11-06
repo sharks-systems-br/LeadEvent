@@ -3,11 +3,13 @@ import { InfluencerService } from "./influencer.service.js";
 import { CreateInfluencerDto } from "./dto/create-influencer.dto.js";
 import { UpdateInfluencerDto } from "./dto/update-influencer.dto.js";
 import { minutes, seconds, Throttle } from "@nestjs/throttler";
+import { Public } from "../../common/decorators/public.decorator.js";
 
 @Controller("influencers")
 export class InfluencerController {
     constructor(private readonly influencerService: InfluencerService) {}
 
+    @Public()
     @Throttle({
         short: { limit: 1, ttl: seconds(1) },
         long: { limit: 5, ttl: minutes(5) },
