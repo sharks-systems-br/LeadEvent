@@ -37,6 +37,8 @@ import {
   isValidFullName,
   validateCompanySocial,
 } from "@/lib/form-validation";
+import { getApiErrorMessage } from "@/lib/api/errors";
+import { submitCompany } from "@/lib/api/submissions";
 
 const PARTNERSHIP_OPTIONS: ChoiceOption[] = [
   {
@@ -167,8 +169,14 @@ function validate(
 
   if (values.formats.length === 0) {
     errors.formats = "Selecione pelo menos um formato de parceria.";
-  } else if (values.formats.includes("outro") && !values.customFormat.trim()) {
-    errors.customFormat = "Descreva o formato desejado.";
+  } else if (values.formats.includes("outro")) {
+    const customFormat = values.customFormat.trim();
+
+    if (!customFormat) {
+      errors.customFormat = "Descreva o formato desejado.";
+    } else if (customFormat.length > 30) {
+      errors.customFormat = "Use no máximo 30 caracteres.";
+    }
   }
 
   if (!values.availability) {
@@ -210,6 +218,9 @@ export function CompanyForm() {
   const [turnstileToken, setTurnstileToken] = React.useState<string | null>(
     null
   );
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [turnstileResetKey, setTurnstileResetKey] = React.useState(0);
 
   const setField = <K extends keyof CompanyValues>(
     key: K,
@@ -239,8 +250,10 @@ export function CompanyForm() {
     });
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (submitting) return;
 
     const nextErrors = validate(values, turnstileToken);
     if (Object.keys(nextErrors).length > 0) {
@@ -250,14 +263,28 @@ export function CompanyForm() {
     }
 
     setErrors({});
-    setSubmitted(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setSubmitError(null);
+    setSubmitting(true);
+
+    try {
+      await submitCompany(values, turnstileToken);
+      setSubmitted(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+      setSubmitError(getApiErrorMessage(error));
+      setTurnstileToken(null);
+      setTurnstileResetKey((key) => key + 1);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleReset = () => {
     setValues(INITIAL_VALUES);
     setErrors({});
     setTurnstileToken(null);
+    setSubmitting(false);
+    setSubmitError(null);
     setSubmitted(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -491,8 +518,8 @@ export function CompanyForm() {
                         onChange={(event) =>
                           setField("customFormat", event.target.value)
                         }
-                        placeholder="Ex.: ativação com espaço de degustação"
-                        maxLength={120}
+                        placeholder="Ex.: degustação de produtos"
+                        maxLength={30}
                         invalid={Boolean(errors.customFormat)}
                       />
                     </Field>
@@ -534,6 +561,7 @@ export function CompanyForm() {
 
                   <div id={FIELD_IDS.turnstile} className="scroll-mt-24">
                     <Turnstile
+                      resetKey={turnstileResetKey}
                       onVerify={(token) => {
                         setTurnstileToken(token);
                         if (token) {
@@ -557,12 +585,22 @@ export function CompanyForm() {
                   </div>
 
                   <div className="border-t border-black/[0.07] pt-6">
+                    {submitError && (
+                      <p
+                        role="alert"
+                        className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+                      >
+                        {submitError}
+                      </p>
+                    )}
                     <SubmitButton
                       type="submit"
                       icon={ArrowRight}
                       className="w-full sm:w-auto"
+                      disabled={submitting}
+                      aria-busy={submitting}
                     >
-                      Enviar cadastro
+                      {submitting ? "Enviando cadastro..." : "Enviar cadastro"}
                     </SubmitButton>
                     <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
                       <Send className="size-3" />

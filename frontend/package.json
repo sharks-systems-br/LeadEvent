@@ -7,10 +7,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:contract": "bun scripts/check-contract.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
+    "axios": "^1.21.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.0",
     "framer-motion": "^14.9.0",

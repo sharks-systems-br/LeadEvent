@@ -80,13 +80,19 @@ function loadTurnstile(): Promise<TurnstileApi | null> {
 
 interface TurnstileProps {
   onVerify: (token: string | null) => void;
+  resetKey?: number;
   className?: string;
 }
 
-export function Turnstile({ onVerify, className }: TurnstileProps) {
+export function Turnstile({
+  onVerify,
+  resetKey = 0,
+  className,
+}: TurnstileProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const widgetRef = React.useRef<string | null>(null);
   const verifyRef = React.useRef(onVerify);
+  const resetRef = React.useRef(resetKey);
   const [api, setApi] = React.useState<TurnstileApi | null>(null);
   const [failed, setFailed] = React.useState(false);
 
@@ -130,6 +136,14 @@ export function Turnstile({ onVerify, className }: TurnstileProps) {
       }
     };
   }, [api]);
+
+  React.useEffect(() => {
+    if (!api || !widgetRef.current || resetRef.current === resetKey) return;
+
+    resetRef.current = resetKey;
+    api.reset(widgetRef.current);
+    verifyRef.current(null);
+  }, [api, resetKey]);
 
   if (!TURNSTILE_ENABLED) return null;
 
