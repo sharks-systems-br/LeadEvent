@@ -8,6 +8,28 @@
       "name": "company",
       "schema": "public",
       "columns": {
+        "approval_status": {
+          "name": "approval_status",
+          "type": "approvalstatus",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'PENDING'",
+          "comment": null,
+          "collation": null,
+          "enumItems": [
+            "PENDING",
+            "APPROVED",
+            "REFUSED"
+          ],
+          "mappedType": "unknown",
+          "nativeEnumName": "ApprovalStatus"
+        },
         "cnpj": {
           "name": "cnpj",
           "type": "varchar(14)",
@@ -59,6 +81,23 @@
           "enumItems": [],
           "mappedType": "datetime"
         },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
         "disponibility": {
           "name": "disponibility",
           "type": "disponibility",
@@ -80,7 +119,7 @@
             "ANY_TIME",
             "BY_EMAIL"
           ],
-          "mappedType": "enum",
+          "mappedType": "unknown",
           "nativeEnumName": "Disponibility"
         },
         "id": {
@@ -217,6 +256,28 @@
       "name": "influencer",
       "schema": "public",
       "columns": {
+        "approval_status": {
+          "name": "approval_status",
+          "type": "approvalstatus",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'PENDING'",
+          "comment": null,
+          "collation": null,
+          "enumItems": [
+            "PENDING",
+            "APPROVED",
+            "REFUSED"
+          ],
+          "mappedType": "unknown",
+          "nativeEnumName": "ApprovalStatus"
+        },
         "city": {
           "name": "city",
           "type": "varchar(150)",
@@ -251,6 +312,23 @@
           "enumItems": [],
           "mappedType": "datetime"
         },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
         "follower_range": {
           "name": "follower_range",
           "type": "followerrange",
@@ -273,7 +351,7 @@
             "_500K_TO_1M",
             "_GT_1M"
           ],
-          "mappedType": "enum",
+          "mappedType": "unknown",
           "nativeEnumName": "FollowerRange"
         },
         "id": {
@@ -572,7 +650,7 @@
             "SITE",
             "X"
           ],
-          "mappedType": "enum",
+          "mappedType": "unknown",
           "nativeEnumName": "SocialMedia"
         },
         "updated_at": {
@@ -768,6 +846,15 @@
   ],
   "views": [],
   "nativeEnums": {
+    "ApprovalStatus": {
+      "name": "ApprovalStatus",
+      "schema": "public",
+      "items": [
+        "PENDING",
+        "APPROVED",
+        "REFUSED"
+      ]
+    },
     "Disponibility": {
       "name": "Disponibility",
       "schema": "public",

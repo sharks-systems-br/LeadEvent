@@ -6,27 +6,64 @@ import driveConfig from "./config/drive.config.js";
 import { createReadStream } from "node:fs";
 import { extname } from "node:path";
 import { fileTypeFromFile } from "file-type";
+import axios, { isAxiosError } from "axios";
+import appConfig from "../../config/app.config.js";
 
 @Injectable()
 export class DriveService extends StorageService {
     private readonly drive: drive_v3.Drive;
     private readonly folderId: string;
     private readonly logger = new Logger(DriveService.name);
+    private readonly countsToSendAlert: ReadonlySet<number> = new Set([20, 30, 40, 50]);
 
-    constructor(@Inject(driveConfig.KEY) config: ConfigType<typeof driveConfig>) {
+    constructor(
+        @Inject(driveConfig.KEY) driveConfiguration: ConfigType<typeof driveConfig>,
+        @Inject(appConfig.KEY) private readonly appConfiguration: ConfigType<typeof appConfig>,
+    ) {
         super();
 
         const auth = new google.auth.OAuth2(
-            config.clientId,
-            config.clientSecret,
+            driveConfiguration.clientId,
+            driveConfiguration.clientSecret,
             "https://developers.google.com/oauthplayground",
         );
         auth.setCredentials({
-            refresh_token: config.refreshToken,
+            refresh_token: driveConfiguration.refreshToken,
         });
 
         this.drive = google.drive({ version: "v3", auth });
-        this.folderId = config.folderId;
+        this.folderId = driveConfiguration.folderId;
+    }
+
+    private async sendAlertToDiscord(currentCount: number, hour: number): Promise<void> {
+        try {
+            await axios.post(this.appConfiguration.discord.webhookUrl, {
+                content: `<@&${this.appConfiguration.discord.roleId}>`,
+                allowed_mentions: {
+                    roles: [this.appConfiguration.discord.roleId],
+                },
+                embeds: [
+                    {
+                        title: `WARNING [LeadEvent]: Quantidade relevante de vídeos subidos para o Drive`,
+                        description: `${currentCount} vídeos foram subidos para o Drive nesta hora: ${hour} (TESTE).`,
+                        color: 0xffa500,
+                        footer: {
+                            text: `LeadEvent - ${this.appConfiguration.enviroment}`,
+                        },
+                        timestamp: new Date().toISOString(),
+                    },
+                ],
+            });
+        } catch (error) {
+            if (isAxiosError(error)) {
+                this.logger.error(
+                    "Falha ao comunicar com o Discord. Resposta do servidor:",
+                    error.response?.data ?? error.message,
+                );
+            } else {
+                this.logger.error("Erro inesperado ao comunicar o Discord:", error);
+            }
+        }
     }
 
     private uploadLimit = { hour: new Date().getHours(), count: 0 };
@@ -45,6 +82,10 @@ export class DriveService extends StorageService {
         }
 
         this.uploadLimit.count++;
+
+        if (this.countsToSendAlert.has(this.uploadLimit.count)) {
+            void this.sendAlertToDiscord(this.uploadLimit.count, this.uploadLimit.hour);
+        }
     }
 
     async upload(path: string): Promise<{ id: string }> {

@@ -12,10 +12,12 @@ import { StorageModule } from "./infra/storage/storage.module.js";
 import { FilesModule } from "./modules/files/files.module.js";
 import { seconds, ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { CompanyModule } from "./modules/company/company.module.js";
+import { AuthModule } from "./modules/auth/auth.module.js";
+import { JwtAuthGuard } from "./common/guards/jwt-auth.guard.js";
 
 @Module({
     imports: [
-        ConfigModule.forRoot(),
+        ConfigModule.forRoot({ load: [appConfig], isGlobal: true }),
         MikroOrmModule.forRootAsync({
             driver: PostgreSqlDriver,
             imports: [ConfigModule.forFeature(appConfig)],
@@ -25,6 +27,7 @@ import { CompanyModule } from "./modules/company/company.module.js";
                 clientUrl: config.database.url,
                 metadataProvider: ReflectMetadataProvider,
                 // debug: true,
+                ignoreUndefinedInQuery: true,
             }),
         }),
         InfluencerModule,
@@ -46,12 +49,17 @@ import { CompanyModule } from "./modules/company/company.module.js";
             errorMessage: "Too Many Requests.",
         }),
         CompanyModule,
+        AuthModule,
     ],
     controllers: [AppController],
     providers: [
         {
             provide: APP_GUARD,
             useClass: ThrottlerGuard,
+        },
+        {
+            provide: APP_GUARD,
+            useClass: JwtAuthGuard,
         },
         {
             provide: APP_PIPE,
