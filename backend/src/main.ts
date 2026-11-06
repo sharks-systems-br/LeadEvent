@@ -9,7 +9,12 @@ async function bootstrap() {
     app.use(helmet());
     app.enableShutdownHooks();
 
-    const config = new DocumentBuilder().setTitle("LeadEvent Backend").setVersion("1.0").build();
+    const config = new DocumentBuilder()
+        .setTitle("LeadEvent Backend")
+        .setVersion("1.0")
+        .addBearerAuth({ type: "http" }, "accessToken")
+        .addSecurityRequirements("accessToken")
+        .build();
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup("api-docs", app, document);
 

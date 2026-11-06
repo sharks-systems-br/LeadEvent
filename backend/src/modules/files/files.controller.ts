@@ -5,11 +5,13 @@ import { diskStorage } from "multer";
 import { SaveFileResponseDto } from "./dto/save-file-response.dto.js";
 import { VideoFilePipe } from "../../common/pipes/video-file.pipe.js";
 import { minutes, seconds, Throttle } from "@nestjs/throttler";
+import { Public } from "../../common/decorators/public.decorator.js";
 
 @Controller("files")
 export class FilesController {
     constructor(private readonly filesService: FilesService) {}
 
+    @Public()
     @Post()
     @Throttle({
         short: { limit: 1, ttl: seconds(1) },
