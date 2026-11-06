@@ -1,9 +1,24 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from "@nestjs/common";
+import {
+    Controller,
+    Get,
+    Post,
+    Body,
+    Param,
+    Delete,
+    ParseUUIDPipe,
+    Query,
+    HttpCode,
+    HttpStatus,
+    Put,
+} from "@nestjs/common";
 import { InfluencerService } from "./influencer.service.js";
 import { CreateInfluencerDto } from "./dto/create-influencer.dto.js";
-import { UpdateInfluencerDto } from "./dto/update-influencer.dto.js";
 import { minutes, seconds, Throttle } from "@nestjs/throttler";
 import { Public } from "../../common/decorators/public.decorator.js";
+import { SearchInfluencerQueryDto } from "./dto/search-influencer-query.dto.js";
+import { Influencer } from "./entities/influencer.entity.js";
+import { CountsResponseDto } from "../../common/dto/counts-response.dto.js";
+import { UpdateApprovalStatusDto } from "../../common/dto/update-approval-status.dto.js";
 
 @Controller("influencers")
 export class InfluencerController {
@@ -20,22 +35,34 @@ export class InfluencerController {
     }
 
     @Get()
-    findAll() {
-        return this.influencerService.findAll();
+    findAll(@Query() query: SearchInfluencerQueryDto) {
+        return this.influencerService.findAll(query);
+    }
+
+    @Get("counts")
+    getCounts(): Promise<CountsResponseDto> {
+        return this.influencerService.getCounts();
     }
 
     @Get(":id")
-    findOne(@Param("id") id: string) {
-        return this.influencerService.findOne(+id);
-    }
-
-    @Patch(":id")
-    update(@Param("id") id: string, @Body() updateInfluencerDto: UpdateInfluencerDto) {
-        return this.influencerService.update(+id, updateInfluencerDto);
+    findOne(@Param("id", ParseUUIDPipe) id: string): Promise<Influencer> {
+        return this.influencerService.findOne(id);
     }
 
     @Delete(":id")
-    remove(@Param("id") id: string) {
-        return this.influencerService.remove(+id);
+    @HttpCode(HttpStatus.NO_CONTENT)
+    remove(@Param("id", ParseUUIDPipe) id: string): Promise<void> {
+        return this.influencerService.remove(id);
+    }
+
+    @Post(":id/recover")
+    @HttpCode(HttpStatus.NO_CONTENT)
+    recover(@Param("id", ParseUUIDPipe) id: string): Promise<void> {
+        return this.influencerService.recover(id);
+    }
+
+    @Put(":id/status")
+    updateStatus(@Param("id", ParseUUIDPipe) id: string, @Body() dto: UpdateApprovalStatusDto): Promise<Influencer> {
+        return this.influencerService.updateStatus(id, dto);
     }
 }
