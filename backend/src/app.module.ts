@@ -27,6 +27,7 @@ import { JwtAuthGuard } from "./common/guards/jwt-auth.guard.js";
                 clientUrl: config.database.url,
                 metadataProvider: ReflectMetadataProvider,
                 // debug: true,
+                ignoreUndefinedInQuery: true,
             }),
         }),
         InfluencerModule,
