@@ -1,9 +1,25 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from "@nestjs/common";
+import {
+    Controller,
+    Get,
+    Post,
+    Body,
+    Patch,
+    Param,
+    Delete,
+    ParseUUIDPipe,
+    HttpCode,
+    HttpStatus,
+    Put,
+    Query,
+} from "@nestjs/common";
 import { CompanyService } from "./company.service.js";
 import { CreateCompanyDto } from "./dto/create-company.dto.js";
-import { UpdateCompanyDto } from "./dto/update-company.dto.js";
 import { Public } from "../../common/decorators/public.decorator.js";
 import { Throttle, seconds, minutes } from "@nestjs/throttler";
+import { Company } from "./entities/company.entity.js";
+import { UpdateApprovalStatusDto } from "../../common/dto/update-approval-status.dto.js";
+import { SearchCompanyQueryDto } from "./dto/search-company-query.dto.js";
+import { CountsResponseDto } from "../../common/dto/counts-response.dto.js";
 
 @Controller("companies")
 export class CompanyController {
@@ -20,22 +36,34 @@ export class CompanyController {
     }
 
     @Get()
-    findAll() {
-        return this.companyService.findAll();
+    findAll(@Query() query: SearchCompanyQueryDto) {
+        return this.companyService.findAll(query);
+    }
+
+    @Get("counts")
+    getCounts(): Promise<CountsResponseDto> {
+        return this.companyService.getCounts();
     }
 
     @Get(":id")
-    findOne(@Param("id") id: string) {
-        return this.companyService.findOne(+id);
-    }
-
-    @Patch(":id")
-    update(@Param("id") id: string, @Body() updateCompanyDto: UpdateCompanyDto) {
-        return this.companyService.update(+id, updateCompanyDto);
+    findOne(@Param("id", ParseUUIDPipe) id: string): Promise<Company> {
+        return this.companyService.findOne(id);
     }
 
     @Delete(":id")
-    remove(@Param("id") id: string) {
-        return this.companyService.remove(+id);
+    @HttpCode(HttpStatus.NO_CONTENT)
+    remove(@Param("id", ParseUUIDPipe) id: string): Promise<void> {
+        return this.companyService.remove(id);
+    }
+
+    @Post(":id/recover")
+    @HttpCode(HttpStatus.NO_CONTENT)
+    recover(@Param("id", ParseUUIDPipe) id: string): Promise<void> {
+        return this.companyService.recover(id);
+    }
+
+    @Put(":id/status")
+    updateStatus(@Param("id", ParseUUIDPipe) id: string, @Body() dto: UpdateApprovalStatusDto): Promise<Company> {
+        return this.companyService.updateStatus(id, dto);
     }
 }
