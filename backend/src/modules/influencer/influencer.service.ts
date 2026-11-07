@@ -107,7 +107,12 @@ export class InfluencerService {
                     ],
                 }),
             },
-            { limit: perPage, offset: (page - 1) * perPage, populate: ["socialMedias"] },
+            {
+                limit: perPage,
+                offset: (page - 1) * perPage,
+                populate: ["socialMedias"],
+                orderBy: { createdAt: "desc", id: "asc" },
+            },
         );
 
         return influencers;

@@ -77,7 +77,12 @@ export class CompanyService {
                     ],
                 }),
             },
-            { limit: perPage, offset: (page - 1) * perPage, populate: ["partnershipFormats"] },
+            {
+                limit: perPage,
+                offset: (page - 1) * perPage,
+                populate: ["partnershipFormats"],
+                orderBy: { createdAt: "desc", id: "asc" },
+            },
         );
 
         return companies;
