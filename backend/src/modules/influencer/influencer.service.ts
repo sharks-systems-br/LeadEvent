@@ -8,6 +8,7 @@ import { FilesService } from "../files/files.service.js";
 import { CountsResponseDto } from "../../common/dto/counts-response.dto.js";
 import { SearchInfluencerQueryDto } from "./dto/search-influencer-query.dto.js";
 import { UpdateApprovalStatusDto } from "../../common/dto/update-approval-status.dto.js";
+import { ApprovalStatus } from "../../common/enums/approval-status.enum.js";
 
 @Injectable()
 export class InfluencerService {
@@ -69,16 +70,17 @@ export class InfluencerService {
     }
 
     async getCounts(): Promise<CountsResponseDto> {
-        const counts = await this.influencerRepository.countBy("approvalStatus");
-        counts["APPROVED"] ??= 0;
-        counts["PENDING"] ??= 0;
-        counts["REFUSED"] ??= 0;
+        const [pending, approved, refused] = await Promise.all([
+            this.influencerRepository.count({ deletedAt: null, approvalStatus: ApprovalStatus.PENDING }),
+            this.influencerRepository.count({ deletedAt: null, approvalStatus: ApprovalStatus.APPROVED }),
+            this.influencerRepository.count({ deletedAt: null, approvalStatus: ApprovalStatus.REFUSED }),
+        ]);
 
         return {
-            APPROVED: counts["APPROVED"],
-            PENDING: counts["PENDING"],
-            REFUSED: counts["REFUSED"],
-            total: counts["APPROVED"] + counts["PENDING"] + counts["REFUSED"],
+            PENDING: pending,
+            APPROVED: approved,
+            REFUSED: refused,
+            total: pending + approved + refused,
         };
     }
 
@@ -95,6 +97,7 @@ export class InfluencerService {
 
         const influencers = await this.influencerRepository.find(
             {
+                deletedAt: null,
                 approvalStatus,
                 followerRange,
                 niche,

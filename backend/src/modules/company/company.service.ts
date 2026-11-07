@@ -4,6 +4,7 @@ import { EntityManager, EntityRepository } from "@mikro-orm/postgresql";
 import { Company } from "./entities/company.entity.js";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { UpdateApprovalStatusDto } from "../../common/dto/update-approval-status.dto.js";
+import { ApprovalStatus } from "../../common/enums/approval-status.enum.js";
 import { SearchCompanyQueryDto } from "./dto/search-company-query.dto.js";
 import { CountsResponseDto } from "../../common/dto/counts-response.dto.js";
 
@@ -36,16 +37,17 @@ export class CompanyService {
     }
 
     async getCounts(): Promise<CountsResponseDto> {
-        const counts = await this.companyRepository.countBy("approvalStatus");
-        counts["APPROVED"] ??= 0;
-        counts["PENDING"] ??= 0;
-        counts["REFUSED"] ??= 0;
+        const [pending, approved, refused] = await Promise.all([
+            this.companyRepository.count({ deletedAt: null, approvalStatus: ApprovalStatus.PENDING }),
+            this.companyRepository.count({ deletedAt: null, approvalStatus: ApprovalStatus.APPROVED }),
+            this.companyRepository.count({ deletedAt: null, approvalStatus: ApprovalStatus.REFUSED }),
+        ]);
 
         return {
-            APPROVED: counts["APPROVED"],
-            PENDING: counts["PENDING"],
-            REFUSED: counts["REFUSED"],
-            total: counts["APPROVED"] + counts["PENDING"] + counts["REFUSED"],
+            PENDING: pending,
+            APPROVED: approved,
+            REFUSED: refused,
+            total: pending + approved + refused,
         };
     }
 
@@ -61,6 +63,7 @@ export class CompanyService {
 
         const companies = await this.companyRepository.find(
             {
+                deletedAt: null,
                 disponibility,
                 approvalStatus,
                 partnershipFormats: {
