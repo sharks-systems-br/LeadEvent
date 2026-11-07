@@ -1,5 +1,13 @@
 import axios from "axios";
 
+export function getLoginErrorMessage(error: unknown): string {
+  if (axios.isAxiosError(error) && error.response?.status === 401) {
+    return "Usuário ou senha inválidos.";
+  }
+
+  return getApiErrorMessage(error);
+}
+
 export function getApiErrorMessage(error: unknown): string {
   if (!axios.isAxiosError(error)) {
     return "Não foi possível enviar. Tente novamente.";

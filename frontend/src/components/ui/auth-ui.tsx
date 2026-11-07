@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useId, type FormEvent } from "react";
-import { ArrowRight, Mail } from "lucide-react";
+import { ArrowRight, Loader2, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,7 @@ import { Typewriter } from "@/components/ui/typewriter";
 import { cn } from "@/lib/utils";
 
 export interface SignInValues {
-  email: string;
+  username: string;
   password: string;
   remember: boolean;
 }
@@ -30,8 +30,9 @@ export interface AuthContent {
 
 export interface AuthUIProps {
   signInContent?: AuthContent;
-  onSignIn?: (values: SignInValues) => void;
-  onForgotPassword?: () => void;
+  error?: string | null;
+  loading?: boolean;
+  onSignIn?: (values: SignInValues) => void | Promise<void>;
 }
 
 const defaultAuthContent: Required<AuthContent> = {
@@ -90,19 +91,21 @@ function Brand({
 
 function SignInForm({
   onSubmit,
-  onForgotPassword,
+  error,
+  loading = false,
 }: {
-  onSubmit?: (values: SignInValues) => void;
-  onForgotPassword?: () => void;
+  onSubmit?: (values: SignInValues) => void | Promise<void>;
+  error?: string | null;
+  loading?: boolean;
 }) {
-  const emailId = useId();
+  const usernameId = useId();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const data = new FormData(event.currentTarget);
-    onSubmit?.({
-      email: String(data.get("email") ?? ""),
+    void onSubmit?.({
+      username: String(data.get("username") ?? "").trim(),
       password: String(data.get("password") ?? ""),
       remember: data.get("remember") === "on",
     });
@@ -121,16 +124,16 @@ function SignInForm({
 
       <div className="mt-8 grid gap-5">
         <div className="grid gap-2">
-          <Label htmlFor={emailId}>Username</Label>
+          <Label htmlFor={usernameId}>Username</Label>
           <div className="relative">
-            <Mail
+            <User
               aria-hidden="true"
               className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/60"
             />
             <Input
-              id={emailId}
+              id={usernameId}
               name="username"
-              type="string"
+              type="text"
               placeholder="username"
               autoComplete="username"
               className="pl-10"
@@ -147,12 +150,31 @@ function SignInForm({
           required
         />
 
+        {error ? (
+          <p
+            role="alert"
+            className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+          >
+            {error}
+          </p>
+        ) : null}
+
         <Button
           type="submit"
+          disabled={loading}
           className="h-12 w-full rounded-xl bg-brand text-sm font-semibold text-brand-foreground shadow-lg shadow-brand/20 transition-colors hover:bg-brand/90"
         >
-          Entrar
-          <ArrowRight aria-hidden="true" className="size-4" />
+          {loading ? (
+            <>
+              Entrando...
+              <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+            </>
+          ) : (
+            <>
+              Entrar
+              <ArrowRight aria-hidden="true" className="size-4" />
+            </>
+          )}
         </Button>
       </div>
     </form>
@@ -161,8 +183,9 @@ function SignInForm({
 
 export function AuthUI({
   signInContent,
+  error,
+  loading,
   onSignIn,
-  onForgotPassword,
 }: AuthUIProps) {
   const content = resolveContent(signInContent);
 
@@ -234,7 +257,8 @@ export function AuthUI({
             <div className="animate-element">
               <SignInForm
                 onSubmit={onSignIn}
-                onForgotPassword={onForgotPassword}
+                error={error}
+                loading={loading}
               />
             </div>
           </div>
