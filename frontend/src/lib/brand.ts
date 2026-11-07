@@ -6,7 +6,7 @@ export const brand = {
     address: "Centro, Maruim/SE — CEP 49770-000",
     dpoName: "Alec Vinicius",
     dpoEmail: "alecvinicius.dev@gmail.com",
-    contactEmail: "contato@leadevent.com",
+    contactEmail: "linkpetroleoegas@gmail.com",
     logo: "/brand/ssb-logo.png",
   },
   product: {

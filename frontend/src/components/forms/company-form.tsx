@@ -640,10 +640,10 @@ export function CompanyForm() {
           <Mail className="mt-0.5 size-3.5 shrink-0" />
           Prefere falar direto com o nosso time? Envie um e-mail para{" "}
           <a
-            href="mailto:contato@leadevent.com"
+            href="mailto:linkpetroleoegas@gmail.com"
             className="font-medium text-foreground underline underline-offset-2"
           >
-            contato@leadevent.com
+            linkpetroleoegas@gmail.com
           </a>
           .
         </div>

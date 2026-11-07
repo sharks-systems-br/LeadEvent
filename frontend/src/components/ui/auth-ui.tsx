@@ -214,7 +214,7 @@ export function AuthUI({
             <Brand />
           </Link>
           <a
-            href="mailto:contato@leadevent.com"
+            href="mailto:linkpetroleoegas@gmail.com"
             className="ml-auto text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             Precisa de ajuda?

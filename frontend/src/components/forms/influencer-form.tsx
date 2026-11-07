@@ -569,7 +569,7 @@ export function InfluencerForm() {
                 <span className="text-muted-foreground/50">no evento.</span>
               </>
             }
-            description="Conte quem você é, mostre o seu conteúdo e concorra a uma vaga entre os criadores selecionados para o próximo LeadEvent."
+            description="Conte quem você é, mostre o seu conteúdo e concorra a uma vaga entre os criadores selecionados para a Feijoada dos Influenciadores em sua quarta edição."
             meta="Leva cerca de 3 minutos · resposta em até 7 dias · maiores de 18 anos"
           />
 
