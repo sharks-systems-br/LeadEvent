@@ -11,6 +11,7 @@ import {
     Put,
     Query,
     Req,
+    UseGuards,
 } from "@nestjs/common";
 import type { Request } from "express";
 import { CompanyService } from "./company.service.js";
@@ -18,6 +19,7 @@ import { CreateCompanyDto } from "./dto/create-company.dto.js";
 import { Public } from "../../common/decorators/public.decorator.js";
 import { CurrentTokenPayload } from "../../common/decorators/current-token-payload.decorator.js";
 import type { TokenPayload } from "../../common/interfaces/token-payload.interface.js";
+import { TurnstileGuard } from "../../common/guards/turnstile.guard.js";
 import { Throttle, seconds, minutes } from "@nestjs/throttler";
 import { Company } from "./entities/company.entity.js";
 import { UpdateApprovalStatusDto } from "../../common/dto/update-approval-status.dto.js";
@@ -29,6 +31,7 @@ export class CompanyController {
     constructor(private readonly companyService: CompanyService) {}
 
     @Public()
+    @UseGuards(TurnstileGuard)
     @Throttle({
         short: { limit: 1, ttl: seconds(1) },
         long: { limit: 5, ttl: minutes(5) },

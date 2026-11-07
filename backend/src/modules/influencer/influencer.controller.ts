@@ -11,6 +11,7 @@ import {
     HttpStatus,
     Put,
     Req,
+    UseGuards,
 } from "@nestjs/common";
 import type { Request } from "express";
 import { InfluencerService } from "./influencer.service.js";
@@ -19,6 +20,7 @@ import { minutes, seconds, Throttle } from "@nestjs/throttler";
 import { Public } from "../../common/decorators/public.decorator.js";
 import { CurrentTokenPayload } from "../../common/decorators/current-token-payload.decorator.js";
 import type { TokenPayload } from "../../common/interfaces/token-payload.interface.js";
+import { TurnstileGuard } from "../../common/guards/turnstile.guard.js";
 import { SearchInfluencerQueryDto } from "./dto/search-influencer-query.dto.js";
 import { Influencer } from "./entities/influencer.entity.js";
 import { CountsResponseDto } from "../../common/dto/counts-response.dto.js";
@@ -29,6 +31,7 @@ export class InfluencerController {
     constructor(private readonly influencerService: InfluencerService) {}
 
     @Public()
+    @UseGuards(TurnstileGuard)
     @Throttle({
         short: { limit: 1, ttl: seconds(1) },
         long: { limit: 5, ttl: minutes(5) },
