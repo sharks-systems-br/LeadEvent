@@ -37,8 +37,8 @@ export interface AuthUIProps {
 
 const defaultAuthContent: Required<AuthContent> = {
   image: {
-    src: "/brand/auth-panel.jpg",
-    alt: "SSB — Sharks Systems Brazil",
+    src: "/media/leadevent-hero.jpg",
+    alt: "Feijoada dos Influenciadores",
   },
   quote: {
     text: [
@@ -57,24 +57,14 @@ function resolveContent(content?: AuthContent) {
   };
 }
 
-function Brand({
-  size = "lg",
-  className,
-}: {
-  size?: "sm" | "lg";
-  className?: string;
-}) {
+function Brand({ className }: { className?: string }) {
   return (
     <Image
       src="/brand/feijoada-logo.png"
       width={200}
       height={123}
       alt="Feijoada dos Influenciadores"
-      className={cn(
-        "w-auto object-contain",
-        size === "lg" ? "h-20 sm:h-24" : "h-12",
-        className
-      )}
+      className={cn("h-14 w-auto object-contain", className)}
     />
   );
 }
@@ -181,29 +171,17 @@ export function AuthUI({
 
   return (
     <main className="grid min-h-[100dvh] w-full bg-white lg:grid-cols-2">
-      <section className="relative hidden overflow-hidden bg-[#061a2b] lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
+      <section className="relative hidden overflow-hidden bg-[#061a2b] lg:flex lg:flex-col lg:justify-end lg:p-12 xl:p-16">
         <Image
           src={content.image.src}
           alt={content.image.alt}
           fill
           priority
           sizes="(min-width: 1024px) 50vw, 100vw"
-          className="object-cover object-[38%_center]"
+          className="object-cover object-[50%_30%]"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#04131f]/90 via-[#061a2b]/30 to-[#04131f]/85" />
-
-        <div className="relative z-10">
-          <Link
-            href="/"
-            aria-label="Voltar para a seleção de perfil"
-            className="inline-block"
-          >
-            <Brand />
-          </Link>
-          <p className="mt-8 max-w-[17rem] text-lg font-light leading-snug text-white/70">
-            Protegendo seus ativos digitais.
-          </p>
-        </div>
+        <div className="absolute inset-0 bg-[#04131f]/20" />
+        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#04131f] via-[#04131f]/75 to-transparent" />
 
         <div className="relative z-10 max-w-sm">
           <blockquote className="space-y-3">
@@ -230,9 +208,8 @@ export function AuthUI({
           <Link
             href="/"
             aria-label="Voltar para a seleção de perfil"
-            className="lg:hidden"
           >
-            <Brand size="sm" />
+            <Brand />
           </Link>
           <a
             href="mailto:contato@leadevent.com"
