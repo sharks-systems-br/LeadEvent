@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
@@ -39,6 +40,7 @@ import {
 } from "@/lib/form-validation";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { submitCompany } from "@/lib/api/submissions";
+import { brand } from "@/lib/brand";
 
 const PARTNERSHIP_OPTIONS: ChoiceOption[] = [
   {
@@ -554,10 +556,21 @@ export function CompanyForm() {
                     onChange={(checked) => setField("consent", checked)}
                     error={errors.consent}
                   >
-                    Autorizo o LeadEvent a entrar em contato por e-mail ou
-                    telefone sobre esta parceria. Os dados serão usados apenas
-                    para este contato.
+                    Autorizo o {brand.product.name} a entrar em contato por
+                    e-mail ou telefone sobre esta parceria, nos termos da
+                    Política de Privacidade.
                   </ConsentCheckbox>
+
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    Saiba como tratamos seus dados na{" "}
+                    <Link
+                      href="/privacidade"
+                      className="font-medium text-foreground underline underline-offset-4"
+                    >
+                      Política de Privacidade
+                    </Link>
+                    .
+                  </p>
 
                   <div id={FIELD_IDS.turnstile} className="scroll-mt-24">
                     <Turnstile
@@ -602,9 +615,19 @@ export function CompanyForm() {
                     >
                       {submitting ? "Enviando cadastro..." : "Enviar cadastro"}
                     </SubmitButton>
-                    <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <Send className="size-3" />
-                      Nenhum dado é compartilhado com terceiros.
+                    <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+                      <Send className="mt-0.5 size-3 shrink-0" />
+                      <span>
+                        Ao enviar, você declara que as informações são
+                        verdadeiras e concorda com a{" "}
+                        <Link
+                          href="/privacidade"
+                          className="font-medium text-foreground underline underline-offset-4"
+                        >
+                          Política de Privacidade
+                        </Link>
+                        .
+                      </span>
                     </p>
                   </div>
                 </FormSection>

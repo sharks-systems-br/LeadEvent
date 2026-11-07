@@ -2,6 +2,7 @@ import * as React from "react";
 import { ArrowLeft, Check, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { TransitionLink } from "@/components/ui/page-transition";
 import { cn } from "@/lib/utils";
+import { companyCredit } from "@/lib/brand";
 
 interface FormPageShellProps {
   badge: string;
@@ -56,7 +57,13 @@ export function FormPageShell({
           Seus dados ficam protegidos
         </span>
         <span className="w-full text-[10px] text-muted-foreground/50">
-          Desenvolvido por SSB · Sharks Systems Brazil
+          {companyCredit} ·{" "}
+          <TransitionLink
+            href="/privacidade"
+            className="underline underline-offset-4 transition-colors hover:text-muted-foreground"
+          >
+            Privacidade
+          </TransitionLink>
         </span>
       </footer>
     </div>

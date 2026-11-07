@@ -10,6 +10,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { brand, companyCredit } from "@/lib/brand";
 import { TransitionLink } from "@/components/ui/page-transition";
 
 export type Role = "company" | "influencer";
@@ -34,10 +35,10 @@ interface SignInPageProps {
 const Brand = () => (
   <div className="flex items-center gap-3">
     <Image
-      src="/brand/feijoada-logo.png"
+      src={brand.event.logo}
       width={200}
       height={123}
-      alt="Feijoada dos Influenciadores"
+      alt={brand.event.name}
       loading="eager"
       className="h-14 w-auto object-contain md:h-16"
     />
@@ -153,7 +154,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   description = "Escolha a opção que mais combina com o seu perfil. Empresas para que possam patrocinar o evento, influenciadores interessados em participar.",
   roles = defaultRoles,
   onSelectRole,
-  supportHref = "mailto:contato@leadevent.com",
+  supportHref = "mailto:linkpetroleoegas@gmail.com",
 }) => {
   return (
     <div className="relative flex min-h-[100dvh] w-full flex-col overflow-hidden bg-background font-sans lg:h-[100dvh] lg:flex-row">
@@ -207,14 +208,14 @@ export const SignInPage: React.FC<SignInPageProps> = ({
 
         <footer className="animate-element animate-delay-700 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground/70">
           <span>
-            Desenvolvido por SSB · Sharks Systems Brazil
+            {companyCredit}
           </span>
-          <a
-            href="#"
+          <TransitionLink
+            href="/privacidade"
             className="transition-colors hover:text-muted-foreground"
           >
             Privacidade
-          </a>
+          </TransitionLink>
         </footer>
       </section>
 

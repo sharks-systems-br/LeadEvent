@@ -52,6 +52,7 @@ import {
 } from "@/lib/api/dashboard";
 import type { Disponibility, FollowerRange } from "@/lib/api/types";
 import { clearTokens } from "@/lib/auth";
+import { brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 type TabId = "companies" | "influencers";
@@ -1272,8 +1273,10 @@ export function DashboardView() {
             </section>
 
             <footer className="mt-10 flex flex-col items-center justify-between gap-1 border-t border-black/[0.06] pt-5 text-[11px] text-muted-foreground/70 sm:flex-row">
-              <span>LeadEvent</span>
-              <span>SSB — Sharks Systems Brazil</span>
+              <span>{brand.product.name}</span>
+              <span>
+                {brand.company.shortName} — {brand.company.name}
+              </span>
             </footer>
           </main>
         </div>

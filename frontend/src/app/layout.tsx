@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { PageTransitionProvider } from "@/components/ui/page-transition";
+import { brand } from "@/lib/brand";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,9 +18,9 @@ export const metadata: Metadata = {
   title: "LeadEvent",
   description:
     "Conectamos empresas e influenciadores em eventos. Escolha o seu perfil para acessar o LeadEvent.",
-  authors: [{ name: "SSB - Sharks Systems Brazil" }],
-  creator: "SSB - Sharks Systems Brazil",
-  publisher: "SSB - Sharks Systems Brazil",
+  authors: [{ name: `${brand.company.shortName} - ${brand.company.name}` }],
+  creator: `${brand.company.shortName} - ${brand.company.name}`,
+  publisher: `${brand.company.shortName} - ${brand.company.name}`,
 };
 
 export const viewport: Viewport = {

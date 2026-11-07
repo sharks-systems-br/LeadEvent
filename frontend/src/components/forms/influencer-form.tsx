@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
@@ -42,6 +43,7 @@ import {
 } from "@/lib/social-links";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { submitInfluencer } from "@/lib/api/submissions";
+import { brand } from "@/lib/brand";
 import {
   formatPhone,
   isVideoFile,
@@ -568,7 +570,7 @@ export function InfluencerForm() {
               </>
             }
             description="Conte quem você é, mostre o seu conteúdo e concorra a uma vaga entre os criadores selecionados para o próximo LeadEvent."
-            meta="Leva cerca de 3 minutos · resposta em até 7 dias"
+            meta="Leva cerca de 3 minutos · resposta em até 7 dias · maiores de 18 anos"
           />
 
           <div className="mt-8">
@@ -979,10 +981,21 @@ export function InfluencerForm() {
                       onChange={(checked) => setField("consent", checked)}
                       error={errors.consent}
                     >
-                      Autorizo o LeadEvent a entrar em contato por e-mail ou
-                      WhatsApp sobre esta seleção e o evento. Meus dados não
-                      serão compartilhados com terceiros.
+                      Autorizo o {brand.product.name} a entrar em contato por
+                      e-mail ou WhatsApp sobre esta seleção e o evento, nos
+                      termos da Política de Privacidade.
                     </ConsentCheckbox>
+
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      O cadastro é destinado a maiores de 18 anos. Consulte a{" "}
+                      <Link
+                        href="/privacidade"
+                        className="font-medium text-foreground underline underline-offset-4"
+                      >
+                        Política de Privacidade
+                      </Link>
+                      .
+                    </p>
 
                     <div id={FIELD_IDS.turnstile} className="scroll-mt-24">
                       <Turnstile
@@ -1020,10 +1033,19 @@ export function InfluencerForm() {
                       >
                         {submitting ? "Enviando cadastro..." : "Enviar cadastro"}
                       </SubmitButton>
-                      <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                        <Send className="size-3" />
-                        Ao enviar, você concorda com o uso dos dados apenas para
-                        contato sobre o evento.
+                      <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+                        <Send className="mt-0.5 size-3 shrink-0" />
+                        <span>
+                          Ao enviar, você declara que as informações são
+                          verdadeiras e concorda com a{" "}
+                          <Link
+                            href="/privacidade"
+                            className="font-medium text-foreground underline underline-offset-4"
+                          >
+                            Política de Privacidade
+                          </Link>
+                          .
+                        </span>
                       </p>
                     </div>
                   </FormSection>

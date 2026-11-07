@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Typewriter } from "@/components/ui/typewriter";
 import { cn } from "@/lib/utils";
+import { brand } from "@/lib/brand";
 
 export interface SignInValues {
   username: string;
@@ -38,7 +39,7 @@ export interface AuthUIProps {
 const defaultAuthContent: Required<AuthContent> = {
   image: {
     src: "/media/leadevent-hero.jpg",
-    alt: "Feijoada dos Influenciadores",
+    alt: brand.event.name,
   },
   quote: {
     text: [
@@ -46,7 +47,7 @@ const defaultAuthContent: Required<AuthContent> = {
       "Conectando marcas e criadores.",
       "Segurança em cada detalhe.",
     ],
-    author: "SSB — Sharks Systems Brazil",
+    author: `${brand.company.shortName} — ${brand.company.name}`,
   },
 };
 
@@ -60,10 +61,11 @@ function resolveContent(content?: AuthContent) {
 function Brand({ className }: { className?: string }) {
   return (
     <Image
-      src="/brand/feijoada-logo.png"
+      src={brand.event.logo}
       width={200}
       height={123}
-      alt="Feijoada dos Influenciadores"
+      alt={brand.event.name}
+      loading="eager"
       className={cn("h-14 w-auto object-contain", className)}
     />
   );
@@ -231,8 +233,16 @@ export function AuthUI({
           </div>
         </div>
 
-        <p className="text-center text-[11px] text-muted-foreground/60 lg:text-left">
-          © SSB · Sharks Systems Brazil
+        <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground/60 lg:justify-start">
+          <span>
+            © {brand.company.shortName} · {brand.company.name}
+          </span>
+          <Link
+            href="/privacidade"
+            className="transition-colors hover:text-foreground"
+          >
+            Privacidade
+          </Link>
         </p>
       </section>
     </main>
