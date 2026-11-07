@@ -34,12 +34,12 @@ interface SignInPageProps {
 const Brand = () => (
   <div className="flex items-center gap-3">
     <Image
-      src="/brand/ssb-logo.png"
-      width={150}
-      height={63}
-      alt="SSB - Sharks Systems Brazil"
+      src="/brand/feijoada-logo.png"
+      width={200}
+      height={123}
+      alt="Feijoada dos Influenciadores"
       loading="eager"
-      className="h-12 w-auto object-contain"
+      className="h-14 w-auto object-contain md:h-16"
     />
     <span className="h-8 w-px bg-black/10" aria-hidden="true" />
     <span className="text-sm font-semibold tracking-tight text-foreground">

@@ -58,34 +58,24 @@ function resolveContent(content?: AuthContent) {
 }
 
 function Brand({
-  variant = "light",
   size = "lg",
   className,
 }: {
-  variant?: "light" | "dark";
   size?: "sm" | "lg";
   className?: string;
 }) {
   return (
-    <div className={className}>
-      <p
-        className={cn(
-          "font-black leading-none tracking-[-0.08em]",
-          size === "lg" ? "text-4xl sm:text-5xl" : "text-2xl",
-          variant === "light" ? "text-white" : "text-[#061a2b]"
-        )}
-      >
-        SSB
-      </p>
-      <p
-        className={cn(
-          "mt-1.5 font-semibold uppercase tracking-[0.3em] text-brand",
-          size === "lg" ? "text-[9px] sm:text-[10px]" : "text-[8px]"
-        )}
-      >
-        Sharks Systems Brazil
-      </p>
-    </div>
+    <Image
+      src="/brand/feijoada-logo.png"
+      width={200}
+      height={123}
+      alt="Feijoada dos Influenciadores"
+      className={cn(
+        "w-auto object-contain",
+        size === "lg" ? "h-20 sm:h-24" : "h-12",
+        className
+      )}
+    />
   );
 }
 
@@ -242,7 +232,7 @@ export function AuthUI({
             aria-label="Voltar para a seleção de perfil"
             className="lg:hidden"
           >
-            <Brand variant="dark" size="sm" />
+            <Brand size="sm" />
           </Link>
           <a
             href="mailto:contato@leadevent.com"
