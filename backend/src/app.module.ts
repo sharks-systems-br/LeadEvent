@@ -25,6 +25,7 @@ import { JwtAuthGuard } from "./common/guards/jwt-auth.guard.js";
             useFactory: (config: ConfigType<typeof appConfig>) => ({
                 autoLoadEntities: true,
                 clientUrl: config.database.url,
+                driverOptions: { ssl: true },
                 metadataProvider: ReflectMetadataProvider,
                 // debug: true,
                 ignoreUndefinedInQuery: true,

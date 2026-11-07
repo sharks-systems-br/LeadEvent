@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { defineConfig, PostgreSqlDriver } from "@mikro-orm/postgresql";
 import { ReflectMetadataProvider } from "@mikro-orm/decorators/legacy";
 import { Migrator } from "@mikro-orm/migrations";
@@ -13,6 +14,7 @@ export default defineConfig({
     entitiesTs: ["./src/**/*.entity.ts"],
     driver: PostgreSqlDriver,
     clientUrl: databaseUrl,
+    driverOptions: { ssl: true },
     metadataProvider: ReflectMetadataProvider,
     extensions: [Migrator],
     migrations: {
