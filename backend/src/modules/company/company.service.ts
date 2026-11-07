@@ -7,12 +7,15 @@ import { UpdateApprovalStatusDto } from "../../common/dto/update-approval-status
 import { ApprovalStatus } from "../../common/enums/approval-status.enum.js";
 import { SearchCompanyQueryDto } from "./dto/search-company-query.dto.js";
 import { CountsResponseDto } from "../../common/dto/counts-response.dto.js";
+import { PRIVACY_POLICY_VERSION } from "../../common/constants/privacy.constants.js";
+import { AuditService } from "../audit/audit.service.js";
 
 @Injectable()
 export class CompanyService {
     constructor(
         private readonly em: EntityManager,
         @InjectRepository(Company) private readonly companyRepository: EntityRepository<Company>,
+        private readonly auditService: AuditService,
     ) {}
 
     private async assertCnpjIsAvailable(cnpj: string): Promise<void> {
@@ -24,13 +27,19 @@ export class CompanyService {
         if (!entity) throw new NotFoundException("Empresa não encontrada.");
     }
 
-    async create(dto: CreateCompanyDto): Promise<void> {
+    async create(dto: CreateCompanyDto, consentIp: string | null): Promise<void> {
         const { confirmContact: _, partnershipFormats, ...rest } = dto;
 
         await this.assertCnpjIsAvailable(rest.cnpj);
 
         this.companyRepository.create(
-            { ...rest, partnershipFormats: partnershipFormats.map(f => ({ format: f })) },
+            {
+                ...rest,
+                partnershipFormats: partnershipFormats.map(f => ({ format: f })),
+                consentAt: new Date(),
+                consentVersion: PRIVACY_POLICY_VERSION,
+                consentIp,
+            },
             { partial: true },
         );
         await this.em.flush();
@@ -101,35 +110,58 @@ export class CompanyService {
         return company;
     }
 
-    async recover(id: string): Promise<void> {
+    async recover(id: string, actor: string): Promise<void> {
         const company = await this.companyRepository.findOne({ id, deletedAt: { $ne: null } });
         this.assertExists(company);
 
         company.deletedAt = null;
 
         await this.em.flush();
+
+        await this.auditService.record({
+            actor,
+            action: "COMPANY_RECOVERED",
+            entityType: "company",
+            entityId: company.id,
+        });
     }
 
-    async updateStatus(id: string, dto: UpdateApprovalStatusDto): Promise<Company> {
+    async updateStatus(id: string, dto: UpdateApprovalStatusDto, actor: string): Promise<Company> {
         const company = await this.companyRepository.findOne(
             { id, deletedAt: null },
             { populate: ["partnershipFormats"] },
         );
         this.assertExists(company);
 
+        const previousStatus = company.approvalStatus;
         company.approvalStatus = dto.approvalStatus;
 
         await this.em.flush();
 
+        await this.auditService.record({
+            actor,
+            action: "COMPANY_STATUS_UPDATED",
+            entityType: "company",
+            entityId: company.id,
+            metadata: { previousStatus, approvalStatus: dto.approvalStatus },
+        });
+
         return company;
     }
 
-    async remove(id: string): Promise<void> {
+    async remove(id: string, actor: string): Promise<void> {
         const company = await this.companyRepository.findOne({ id, deletedAt: null });
         this.assertExists(company);
 
         company.deletedAt = new Date();
 
         await this.em.flush();
+
+        await this.auditService.record({
+            actor,
+            action: "COMPANY_DELETED",
+            entityType: "company",
+            entityId: company.id,
+        });
     }
 }

@@ -35,5 +35,14 @@ export class Company extends BaseEntity {
     approvalStatus: ApprovalStatus;
 
     @Property({ nullable: true, type: "timestamptz" })
+    consentAt: Date | null;
+
+    @Property({ nullable: true, type: "varchar", length: 20 })
+    consentVersion: string | null;
+
+    @Property({ nullable: true, type: "varchar", length: 45 })
+    consentIp: string | null;
+
+    @Property({ nullable: true, type: "timestamptz" })
     deletedAt: Date | null;
 }

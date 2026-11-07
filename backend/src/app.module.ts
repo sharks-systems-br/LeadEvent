@@ -13,6 +13,7 @@ import { FilesModule } from "./modules/files/files.module.js";
 import { seconds, ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { CompanyModule } from "./modules/company/company.module.js";
 import { AuthModule } from "./modules/auth/auth.module.js";
+import { AuditModule } from "./modules/audit/audit.module.js";
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard.js";
 
 @Module({
@@ -51,6 +52,7 @@ import { JwtAuthGuard } from "./common/guards/jwt-auth.guard.js";
         }),
         CompanyModule,
         AuthModule,
+        AuditModule,
     ],
     controllers: [AppController],
     providers: [

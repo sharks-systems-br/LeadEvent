@@ -9,6 +9,8 @@ import { CountsResponseDto } from "../../common/dto/counts-response.dto.js";
 import { SearchInfluencerQueryDto } from "./dto/search-influencer-query.dto.js";
 import { UpdateApprovalStatusDto } from "../../common/dto/update-approval-status.dto.js";
 import { ApprovalStatus } from "../../common/enums/approval-status.enum.js";
+import { PRIVACY_POLICY_VERSION } from "../../common/constants/privacy.constants.js";
+import { AuditService } from "../audit/audit.service.js";
 
 @Injectable()
 export class InfluencerService {
@@ -18,6 +20,7 @@ export class InfluencerService {
         private readonly em: EntityManager,
         private readonly storageService: StorageService,
         private readonly filesService: FilesService,
+        private readonly auditService: AuditService,
     ) {}
 
     private async assertInstagramIsAvailable(instagram: string): Promise<void> {
@@ -29,7 +32,7 @@ export class InfluencerService {
         if (!entity) throw new NotFoundException("Influencer não encontrado.");
     }
 
-    async create(dto: CreateInfluencerDto): Promise<void> {
+    async create(dto: CreateInfluencerDto, consentIp: string | null): Promise<void> {
         const { filePath, fileUrl, confirmContact: _, socialMedias, ...rest } = dto;
 
         if (filePath) {
@@ -58,6 +61,9 @@ export class InfluencerService {
                     videoId,
                     videoUrl,
                     socialMedias: socialMedias?.map(sm => ({ ...sm })),
+                    consentAt: new Date(),
+                    consentVersion: PRIVACY_POLICY_VERSION,
+                    consentIp,
                 },
                 { partial: true },
             );
@@ -131,35 +137,58 @@ export class InfluencerService {
         return influencer;
     }
 
-    async recover(id: string): Promise<void> {
+    async recover(id: string, actor: string): Promise<void> {
         const influencer = await this.influencerRepository.findOne({ id, deletedAt: { $ne: null } });
         this.assertExists(influencer);
 
         influencer.deletedAt = null;
 
         await this.em.flush();
+
+        await this.auditService.record({
+            actor,
+            action: "INFLUENCER_RECOVERED",
+            entityType: "influencer",
+            entityId: influencer.id,
+        });
     }
 
-    async updateStatus(id: string, dto: UpdateApprovalStatusDto): Promise<Influencer> {
+    async updateStatus(id: string, dto: UpdateApprovalStatusDto, actor: string): Promise<Influencer> {
         const influencer = await this.influencerRepository.findOne(
             { id, deletedAt: null },
             { populate: ["socialMedias"] },
         );
         this.assertExists(influencer);
 
+        const previousStatus = influencer.approvalStatus;
         influencer.approvalStatus = dto.approvalStatus;
 
         await this.em.flush();
 
+        await this.auditService.record({
+            actor,
+            action: "INFLUENCER_STATUS_UPDATED",
+            entityType: "influencer",
+            entityId: influencer.id,
+            metadata: { previousStatus, approvalStatus: dto.approvalStatus },
+        });
+
         return influencer;
     }
 
-    async remove(id: string): Promise<void> {
+    async remove(id: string, actor: string): Promise<void> {
         const influencer = await this.influencerRepository.findOne({ id, deletedAt: null });
         this.assertExists(influencer);
 
         influencer.deletedAt = new Date();
 
         await this.em.flush();
+
+        await this.auditService.record({
+            actor,
+            action: "INFLUENCER_DELETED",
+            entityType: "influencer",
+            entityId: influencer.id,
+        });
     }
 }

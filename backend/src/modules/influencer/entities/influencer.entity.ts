@@ -44,5 +44,14 @@ export class Influencer extends BaseEntity {
     socialMedias = new Collection<InfluencerSocialMedia>(this);
 
     @Property({ nullable: true, type: "timestamptz" })
+    consentAt: Date | null;
+
+    @Property({ nullable: true, type: "varchar", length: 20 })
+    consentVersion: string | null;
+
+    @Property({ nullable: true, type: "varchar", length: 45 })
+    consentIp: string | null;
+
+    @Property({ nullable: true, type: "timestamptz" })
     deletedAt: Date | null;
 }
