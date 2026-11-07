@@ -15,7 +15,7 @@ async function bootstrap() {
             .split(",")
             .map(origin => origin.trim())
             .filter(Boolean),
-        methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     });
 
     const config = new DocumentBuilder()

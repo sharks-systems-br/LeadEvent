@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -34,20 +35,34 @@ import {
 } from "@/components/ui/dashboard-sidebar";
 import { Input } from "@/components/ui/input";
 import {
+  countLeads,
   DISPONIBILITY_LABELS,
   FOLLOWER_RANGE_LABELS,
+  getAllCompanies,
+  getAllInfluencers,
+  getCompanyCounts,
+  getInfluencerCounts,
   LEAD_STATUS_LABELS,
-  getCompanies,
-  getInfluencers,
+  updateCompanyStatus,
+  updateInfluencerStatus,
   type CompanyLead,
   type InfluencerLead,
+  type LeadCounts,
   type LeadStatus,
 } from "@/lib/api/dashboard";
 import type { Disponibility, FollowerRange } from "@/lib/api/types";
+import { clearTokens } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 type TabId = "companies" | "influencers";
 type StatusFilter = "ALL" | LeadStatus;
+
+interface DashboardData {
+  companies: CompanyLead[];
+  influencers: InfluencerLead[];
+  companyCounts: LeadCounts | null;
+  influencerCounts: LeadCounts | null;
+}
 
 const PAGE_SIZE = 6;
 const DEMO_AVAILABLE = process.env.NODE_ENV !== "production";
@@ -87,6 +102,19 @@ function countStatuses<T extends { status: LeadStatus }>(
   }
 
   return counts;
+}
+
+function shiftCounts(
+  counts: LeadCounts,
+  from: LeadStatus,
+  to: LeadStatus
+): LeadCounts {
+  if (from === to) return counts;
+
+  const next = { ...counts };
+  next[from] = Math.max(0, next[from] - 1);
+  next[to] += 1;
+  return next;
 }
 
 function StatCard({
@@ -143,9 +171,11 @@ function FilterSelect({
 
 function LeadActions({
   status,
+  loading = false,
   onChange,
 }: {
   status: LeadStatus;
+  loading?: boolean;
   onChange: (status: LeadStatus) => void;
 }) {
   return (
@@ -160,11 +190,19 @@ function LeadActions({
       </span>
 
       <div className="ml-auto flex items-center gap-1.5">
+        {loading && (
+          <Loader2
+            aria-hidden="true"
+            className="size-3.5 animate-spin text-muted-foreground"
+          />
+        )}
+
         {status !== "APPROVED" && (
           <button
             type="button"
             onClick={() => onChange("APPROVED")}
-            className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
+            disabled={loading}
+            className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Check className="size-3.5" />
             Aprovar
@@ -175,7 +213,8 @@ function LeadActions({
           <button
             type="button"
             onClick={() => onChange("PENDING")}
-            className="inline-flex items-center gap-1 rounded-lg border border-black/[0.1] bg-white px-2 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-black/[0.03]"
+            disabled={loading}
+            className="inline-flex items-center gap-1 rounded-lg border border-black/[0.1] bg-white px-2 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-black/[0.03] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RotateCcw className="size-3.5" />
             Reativar
@@ -184,7 +223,8 @@ function LeadActions({
           <button
             type="button"
             onClick={() => onChange("REJECTED")}
-            className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[11px] font-medium text-red-600 transition-colors hover:bg-red-100"
+            disabled={loading}
+            className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[11px] font-medium text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Ban className="size-3.5" />
             Recusar
@@ -224,7 +264,21 @@ export function DashboardView() {
   );
   const [demoMode, setDemoMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [updatingLeadId, setUpdatingLeadId] = useState<string | null>(null);
+  const [companyTotals, setCompanyTotals] = useState<LeadCounts>({
+    total: 0,
+    PENDING: 0,
+    APPROVED: 0,
+    REJECTED: 0,
+  });
+  const [influencerTotals, setInfluencerTotals] = useState<LeadCounts>({
+    total: 0,
+    PENDING: 0,
+    APPROVED: 0,
+    REJECTED: 0,
+  });
   const [tab, setTab] = useState<TabId>("companies");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [query, setQuery] = useState("");
@@ -237,6 +291,7 @@ export function DashboardView() {
   const [stateFilter, setStateFilter] = useState("ALL");
   const [page, setPage] = useState(1);
   const [menuOpen, setMenuOpen] = useState(false);
+  const initialFetchRef = useRef<Promise<DashboardData> | null>(null);
 
   const applyDemoData = useCallback(async () => {
     const { demoCompanies, demoInfluencers } = await import(
@@ -245,105 +300,104 @@ export function DashboardView() {
 
     setCompanies(demoCompanies);
     setInfluencers(demoInfluencers);
+    setCompanyTotals(countLeads(demoCompanies));
+    setInfluencerTotals(countLeads(demoInfluencers));
     setDemoMode(true);
     setError(null);
+    setStatusError(null);
     setStatus("ready");
   }, []);
 
-  const load = useCallback(async () => {
-    setRefreshing(true);
+  const applyDashboardData = useCallback((data: DashboardData) => {
+    setCompanies(data.companies);
+    setInfluencers(data.influencers);
+    setCompanyTotals(data.companyCounts ?? countLeads(data.companies));
+    setInfluencerTotals(data.influencerCounts ?? countLeads(data.influencers));
+    setDemoMode(false);
+    setError(null);
+    setStatusError(null);
+    setStatus("ready");
+  }, []);
 
-    try {
+  const fetchDashboard =
+    useCallback(async (): Promise<DashboardData> => {
       const [companyData, influencerData] = await Promise.all([
-        getCompanies(),
-        getInfluencers(),
+        getAllCompanies(),
+        getAllInfluencers(),
       ]);
 
-      setCompanies(
-        companyData.map((company) => ({
-          ...company,
-          status: company.status ?? "PENDING",
-        }))
-      );
-      setInfluencers(
-        influencerData.map((influencer) => ({
-          ...influencer,
-          status: influencer.status ?? "PENDING",
-        }))
-      );
-      setDemoMode(false);
-      setError(null);
-      setStatus("ready");
-    } catch {
-      if (DEMO_AVAILABLE) {
-        await applyDemoData();
-      } else {
-        setError(LOAD_ERROR);
-        setStatus((current) => (current === "ready" ? current : "error"));
+      let companyCounts: LeadCounts | null = null;
+      let influencerCounts: LeadCounts | null = null;
+
+      try {
+        [companyCounts, influencerCounts] = await Promise.all([
+          getCompanyCounts(),
+          getInfluencerCounts(),
+        ]);
+      } catch {
+        // Contadores são opcionais; a lista usa fallback calculado localmente.
       }
-    } finally {
-      setRefreshing(false);
+
+      return {
+        companies: companyData,
+        influencers: influencerData,
+        companyCounts,
+        influencerCounts,
+      };
+    }, []);
+
+  const handleLoadFailure = useCallback(async () => {
+    if (DEMO_AVAILABLE) {
+      await applyDemoData();
+    } else {
+      setError(LOAD_ERROR);
+      setStatus((current) => (current === "ready" ? current : "error"));
     }
   }, [applyDemoData]);
 
+  const load = useCallback(async () => {
+    try {
+      const data = await fetchDashboard();
+      applyDashboardData(data);
+    } catch {
+      await handleLoadFailure();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchDashboard, applyDashboardData, handleLoadFailure]);
+
   useEffect(() => {
     let active = true;
+    const request = initialFetchRef.current ?? fetchDashboard();
+    initialFetchRef.current = request;
 
-    Promise.all([getCompanies(), getInfluencers()])
-      .then(([companyData, influencerData]) => {
-        if (!active) return;
-
-        setCompanies(
-          companyData.map((company) => ({
-            ...company,
-            status: company.status ?? "PENDING",
-          }))
-        );
-        setInfluencers(
-          influencerData.map((influencer) => ({
-            ...influencer,
-            status: influencer.status ?? "PENDING",
-          }))
-        );
-        setDemoMode(false);
-        setError(null);
-        setStatus("ready");
+    request
+      .then((data) => {
+        if (active) applyDashboardData(data);
       })
       .catch(async () => {
-        if (!active) return;
-
-        if (DEMO_AVAILABLE) {
-          await applyDemoData();
-        } else {
-          setError(LOAD_ERROR);
-          setStatus("error");
-        }
+        if (active) await handleLoadFailure();
       });
 
     return () => {
       active = false;
     };
-  }, [applyDemoData]);
+  }, [fetchDashboard, applyDashboardData, handleLoadFailure]);
+
+  function refresh() {
+    setRefreshing(true);
+    void load();
+  }
 
   function retry() {
     setStatus("loading");
     void load();
   }
 
-  const pendingCount = useMemo(
-    () =>
-      companies.filter((company) => company.status === "PENDING").length +
-      influencers.filter((influencer) => influencer.status === "PENDING").length,
-    [companies, influencers]
-  );
-
-  const rejectedCount = useMemo(
-    () =>
-      companies.filter((company) => company.status === "REJECTED").length +
-      influencers.filter((influencer) => influencer.status === "REJECTED")
-        .length,
-    [companies, influencers]
-  );
+  const companyTotal = companyTotals.total || companies.length;
+  const influencerTotal = influencerTotals.total || influencers.length;
+  const pendingCount = companyTotals.PENDING + influencerTotals.PENDING;
+  const rejectedCount = companyTotals.REJECTED + influencerTotals.REJECTED;
 
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -501,18 +555,18 @@ export function DashboardView() {
             id: "companies",
             title: "Empresas",
             icon: Building2,
-            badge: companies.length,
+            badge: companyTotal,
           },
           {
             id: "influencers",
             title: "Influencers",
             icon: Users,
-            badge: influencers.length,
+            badge: influencerTotal,
           },
         ],
       },
     ],
-    [companies.length, influencers.length]
+    [companyTotal, influencerTotal]
   );
 
   function clearFilters() {
@@ -536,7 +590,8 @@ export function DashboardView() {
     }
 
     if (id === "logout") {
-      router.push("/login");
+      clearTokens();
+      router.replace("/login");
     }
   }
 
@@ -545,20 +600,104 @@ export function DashboardView() {
     clearFilters();
   }
 
-  function changeCompanyStatus(id: string, nextStatus: LeadStatus) {
+  async function changeCompanyStatus(id: string, nextStatus: LeadStatus) {
+    if (updatingLeadId) return;
+
+    const previous = companies.find((company) => company.id === id);
+    if (!previous || previous.status === nextStatus) return;
+
+    if (demoMode) {
+      setCompanies((current) =>
+        current.map((company) =>
+          company.id === id ? { ...company, status: nextStatus } : company
+        )
+      );
+      setCompanyTotals((current) =>
+        shiftCounts(current, previous.status, nextStatus)
+      );
+      return;
+    }
+
+    setUpdatingLeadId(id);
+    setStatusError(null);
     setCompanies((current) =>
       current.map((company) =>
         company.id === id ? { ...company, status: nextStatus } : company
       )
     );
+    setCompanyTotals((current) =>
+      shiftCounts(current, previous.status, nextStatus)
+    );
+
+    try {
+      const updated = await updateCompanyStatus(id, nextStatus);
+      setCompanies((current) =>
+        current.map((company) => (company.id === id ? updated : company))
+      );
+    } catch {
+      setCompanies((current) =>
+        current.map((company) => (company.id === id ? previous : company))
+      );
+      setCompanyTotals((current) =>
+        shiftCounts(current, nextStatus, previous.status)
+      );
+      setStatusError("Não foi possível atualizar o status. Tente novamente.");
+    } finally {
+      setUpdatingLeadId(null);
+    }
   }
 
-  function changeInfluencerStatus(id: string, nextStatus: LeadStatus) {
+  async function changeInfluencerStatus(id: string, nextStatus: LeadStatus) {
+    if (updatingLeadId) return;
+
+    const previous = influencers.find((influencer) => influencer.id === id);
+    if (!previous || previous.status === nextStatus) return;
+
+    if (demoMode) {
+      setInfluencers((current) =>
+        current.map((influencer) =>
+          influencer.id === id
+            ? { ...influencer, status: nextStatus }
+            : influencer
+        )
+      );
+      setInfluencerTotals((current) =>
+        shiftCounts(current, previous.status, nextStatus)
+      );
+      return;
+    }
+
+    setUpdatingLeadId(id);
+    setStatusError(null);
     setInfluencers((current) =>
       current.map((influencer) =>
         influencer.id === id ? { ...influencer, status: nextStatus } : influencer
       )
     );
+    setInfluencerTotals((current) =>
+      shiftCounts(current, previous.status, nextStatus)
+    );
+
+    try {
+      const updated = await updateInfluencerStatus(id, nextStatus);
+      setInfluencers((current) =>
+        current.map((influencer) =>
+          influencer.id === id ? updated : influencer
+        )
+      );
+    } catch {
+      setInfluencers((current) =>
+        current.map((influencer) =>
+          influencer.id === id ? previous : influencer
+        )
+      );
+      setInfluencerTotals((current) =>
+        shiftCounts(current, nextStatus, previous.status)
+      );
+      setStatusError("Não foi possível atualizar o status. Tente novamente.");
+    } finally {
+      setUpdatingLeadId(null);
+    }
   }
 
   const currentTabLabel = TABS.find((item) => item.id === tab)?.label ?? "";
@@ -656,7 +795,7 @@ export function DashboardView() {
               <div className="ml-auto flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => void load()}
+                  onClick={refresh}
                   disabled={refreshing}
                   aria-label="Atualizar cadastros"
                   className="flex size-9 items-center justify-center rounded-lg border border-black/[0.08] bg-white text-muted-foreground transition-colors hover:bg-black/[0.03] hover:text-foreground disabled:opacity-60"
@@ -683,7 +822,7 @@ export function DashboardView() {
                 </div>
                 <p className="text-sm text-white/60">
                   <span className="block text-2xl font-semibold text-white">
-                    {companies.length + influencers.length}
+                    {companyTotal + influencerTotal}
                   </span>
                   cadastros no total
                 </p>
@@ -693,13 +832,13 @@ export function DashboardView() {
             <section className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatCard
                 label="Empresas"
-                value={companies.length}
+                value={companyTotal}
                 hint="Total recebido"
                 icon={Building2}
               />
               <StatCard
                 label="Influencers"
-                value={influencers.length}
+                value={influencerTotal}
                 hint="Total recebido"
                 icon={Users}
               />
@@ -727,7 +866,7 @@ export function DashboardView() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => void load()}
+                  onClick={refresh}
                   disabled={refreshing}
                   className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-100 disabled:opacity-60"
                 >
@@ -735,6 +874,23 @@ export function DashboardView() {
                     className={cn("size-3.5", refreshing && "animate-spin")}
                   />
                   Tentar servidor
+                </button>
+              </div>
+            )}
+
+            {statusError && (
+              <div
+                role="alert"
+                className="mt-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+              >
+                <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                <p className="flex-1">{statusError}</p>
+                <button
+                  type="button"
+                  onClick={() => setStatusError(null)}
+                  className="shrink-0 font-semibold underline underline-offset-2"
+                >
+                  Fechar
                 </button>
               </div>
             )}
@@ -747,7 +903,7 @@ export function DashboardView() {
               >
                 {TABS.map(({ id, label, icon: Icon }) => {
                   const count =
-                    id === "companies" ? companies.length : influencers.length;
+                    id === "companies" ? companyTotal : influencerTotal;
                   const isActive = tab === id;
 
                   return (
@@ -949,7 +1105,7 @@ export function DashboardView() {
                 <p className="flex-1">{error}</p>
                 <button
                   type="button"
-                  onClick={() => void load()}
+                  onClick={retry}
                   className="shrink-0 font-semibold underline underline-offset-2"
                 >
                   Tentar de novo
@@ -1038,8 +1194,12 @@ export function DashboardView() {
                             actions={
                               <LeadActions
                                 status={company.status}
+                                loading={updatingLeadId === company.id}
                                 onChange={(nextStatus) =>
-                                  changeCompanyStatus(company.id, nextStatus)
+                                  void changeCompanyStatus(
+                                    company.id,
+                                    nextStatus
+                                  )
                                 }
                               />
                             }
@@ -1052,8 +1212,9 @@ export function DashboardView() {
                             actions={
                               <LeadActions
                                 status={influencer.status}
+                                loading={updatingLeadId === influencer.id}
                                 onChange={(nextStatus) =>
-                                  changeInfluencerStatus(
+                                  void changeInfluencerStatus(
                                     influencer.id,
                                     nextStatus
                                   )
