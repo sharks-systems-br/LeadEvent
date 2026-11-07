@@ -44,6 +44,7 @@ import {
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { submitInfluencer } from "@/lib/api/submissions";
 import { brand } from "@/lib/brand";
+import { useFormDraft } from "@/lib/use-form-draft";
 import {
   formatPhone,
   isVideoFile,
@@ -129,6 +130,9 @@ const INITIAL_VALUES: InfluencerValues = {
   customCity: "",
   consent: false,
 };
+
+const DRAFT_KEY = "leadevent:influencer-draft";
+const DRAFT_OMIT: readonly (keyof InfluencerValues)[] = ["consent"];
 
 const FIELD_IDS: Record<FieldKey, string> = {
   fullName: "influencer-full-name",
@@ -250,7 +254,11 @@ function focusFirstError(errors: Errors) {
 
 export function InfluencerForm() {
   const reduceMotion = useReducedMotion();
-  const [values, setValues] = React.useState<InfluencerValues>(INITIAL_VALUES);
+  const [values, setValues, clearDraft] = useFormDraft<InfluencerValues>(
+    DRAFT_KEY,
+    INITIAL_VALUES,
+    DRAFT_OMIT
+  );
   const [errors, setErrors] = React.useState<Errors>({});
   const [video, setVideo] = React.useState<{ file: File; url: string } | null>(
     null
@@ -491,6 +499,7 @@ export function InfluencerForm() {
 
     try {
       await submitInfluencer(values, video?.file ?? null, turnstileToken);
+      clearDraft();
 
       setVideo(null);
       setVideoMetadata(null);
@@ -514,6 +523,7 @@ export function InfluencerForm() {
   };
 
   const handleReset = () => {
+    clearDraft();
     videoCheckRef.current += 1;
     videoAbortRef.current?.abort();
     videoAbortRef.current = null;

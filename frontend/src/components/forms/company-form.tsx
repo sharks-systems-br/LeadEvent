@@ -41,6 +41,7 @@ import {
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { submitCompany } from "@/lib/api/submissions";
 import { brand } from "@/lib/brand";
+import { useFormDraft } from "@/lib/use-form-draft";
 
 const PARTNERSHIP_OPTIONS: ChoiceOption[] = [
   {
@@ -115,6 +116,9 @@ const INITIAL_VALUES: CompanyValues = {
   availability: "",
   consent: false,
 };
+
+const DRAFT_KEY = "leadevent:company-draft";
+const DRAFT_OMIT: readonly (keyof CompanyValues)[] = ["consent"];
 
 const FIELD_IDS: Record<FieldKey, string> = {
   companyName: "company-name",
@@ -214,7 +218,11 @@ function focusFirstError(errors: Errors) {
 
 export function CompanyForm() {
   const reduceMotion = useReducedMotion();
-  const [values, setValues] = React.useState<CompanyValues>(INITIAL_VALUES);
+  const [values, setValues, clearDraft] = useFormDraft<CompanyValues>(
+    DRAFT_KEY,
+    INITIAL_VALUES,
+    DRAFT_OMIT
+  );
   const [errors, setErrors] = React.useState<Errors>({});
   const [submitted, setSubmitted] = React.useState(false);
   const [turnstileToken, setTurnstileToken] = React.useState<string | null>(
@@ -270,6 +278,7 @@ export function CompanyForm() {
 
     try {
       await submitCompany(values, turnstileToken);
+      clearDraft();
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
@@ -282,6 +291,7 @@ export function CompanyForm() {
   };
 
   const handleReset = () => {
+    clearDraft();
     setValues(INITIAL_VALUES);
     setErrors({});
     setTurnstileToken(null);
