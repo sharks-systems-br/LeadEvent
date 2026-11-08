@@ -16,6 +16,30 @@ type VideoSource =
   | { kind: "file"; src: string }
   | { kind: "link"; src: string; label: string };
 
+function getGoogleDriveFileId(value: string): string | null {
+  try {
+    const url = new URL(
+      /^https?:\/\//i.test(value) ? value : `https://${value}`
+    );
+
+    if (
+      url.hostname !== "drive.google.com" &&
+      url.hostname !== "www.drive.google.com" &&
+      url.hostname !== "docs.google.com"
+    ) {
+      return null;
+    }
+
+    return (
+      url.pathname.match(/\/file\/d\/([A-Za-z0-9_-]+)/)?.[1] ??
+      url.searchParams.get("id")?.match(/^[A-Za-z0-9_-]+$/)?.[0] ??
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
 function resolveVideoSource(url: string): VideoSource {
   const link = parseVideoLink(url);
 
@@ -37,7 +61,7 @@ function resolveVideoSource(url: string): VideoSource {
     }
   }
 
-  const driveId = url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/)?.[1];
+  const driveId = getGoogleDriveFileId(url);
 
   if (driveId) {
     return {
@@ -82,7 +106,7 @@ export function VideoPlayer({
     const isDrive = source.src.includes("drive.google.com");
 
     return (
-      <div className="space-y-2">
+      <div className="-m-3 w-[calc(100%+1.5rem)] space-y-2">
         <iframe
           src={source.src}
           title={title}
@@ -90,13 +114,13 @@ export function VideoPlayer({
           allowFullScreen
           style={{ aspectRatio: source.aspectRatio }}
           className={cn(
-            "w-full rounded-2xl border-0 bg-black",
+            "aspect-video h-auto w-full rounded-none border-0 bg-black",
             className
           )}
         />
         {isDrive && (
           <a
-            href={source.src.replace("/preview", "/view")}
+            href={source.href}
             target="_blank"
             rel="noreferrer"
             className="inline-flex text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -119,14 +143,14 @@ export function VideoPlayer({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="-m-3 w-[calc(100%+1.5rem)] space-y-2">
       <video
         src={source.src}
         controls
         autoPlay
         playsInline
         preload="metadata"
-        className={cn("max-h-[70vh] w-full rounded-2xl bg-black", className)}
+        className={cn("max-h-[70vh] w-full rounded-none bg-black", className)}
       />
       <a
         href={source.src}
