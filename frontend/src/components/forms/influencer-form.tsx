@@ -62,6 +62,7 @@ import {
   readVideoMetadata,
   type VideoMetadata,
 } from "@/lib/video-validation";
+import { resolveTikTokShortLink } from "@/lib/video-embeds";
 
 const UF_LIST = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
@@ -199,7 +200,7 @@ function validate(
   const link = values.videoLink.trim();
   if (link && !parseVideoLink(link)) {
     errors.videoLink =
-      "Use um link do YouTube, Vimeo ou um arquivo de vídeo direto.";
+      "Use um link do YouTube, Vimeo, Instagram, TikTok ou um arquivo de vídeo direto.";
   } else if (!link && !hasFile) {
     errors.video = "Adicione o link do seu vídeo ou envie um arquivo.";
   }
@@ -269,6 +270,7 @@ export function InfluencerForm() {
     React.useState<VideoMetadata | null>(null);
   const [videoCheck, setVideoCheck] =
     React.useState<VideoCheckStatus>("idle");
+  const [resolvingLink, setResolvingLink] = React.useState(false);
   const [turnstileToken, setTurnstileToken] = React.useState<string | null>(
     null
   );
@@ -389,7 +391,8 @@ export function InfluencerForm() {
       setVideo(null);
       setErrors((previous) => ({
         ...previous,
-        video: "Envie um arquivo de vídeo (MP4, MOV, WEBM...).",
+        video:
+          "Envie um arquivo de vídeo válido (MP4, MOV, MKV, AVI, WEBM, WMV...).",
       }));
       return;
     }
@@ -464,6 +467,55 @@ export function InfluencerForm() {
     [values.videoLink]
   );
 
+  React.useEffect(() => {
+    if (linkPreview?.kind !== "tiktok" || !linkPreview.needsResolution) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setResolvingLink(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setResolvingLink(true);
+
+    const timer = window.setTimeout(() => {
+      resolveTikTokShortLink(linkPreview.url, controller.signal).then(
+        (resolved) => {
+          if (controller.signal.aborted) return;
+
+          setResolvingLink(false);
+
+          if (resolved && resolved.kind === "tiktok") {
+            setValues((previous) => {
+              const current = parseVideoLink(previous.videoLink);
+              if (current?.kind !== "tiktok" || !current.needsResolution) {
+                return previous;
+              }
+              return { ...previous, videoLink: resolved.url };
+            });
+            setErrors((previous) => {
+              if (!previous.videoLink) return previous;
+              const next = { ...previous };
+              delete next.videoLink;
+              return next;
+            });
+            return;
+          }
+
+          setErrors((previous) => ({
+            ...previous,
+            videoLink:
+              "Não foi possível resolver o link curto do TikTok. Cole a URL completa do vídeo.",
+          }));
+        }
+      );
+    }, 400);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [linkPreview, setValues]);
+
   const preview: PreviewSource | null = video
     ? {
         kind: "upload",
@@ -483,6 +535,18 @@ export function InfluencerForm() {
       const message = "Aguarde a verificação do vídeo antes de enviar.";
       setErrors((previous) => ({ ...previous, video: message }));
       focusFirstError({ video: message });
+      return;
+    }
+
+    if (
+      resolvingLink ||
+      (linkPreview?.kind === "tiktok" && linkPreview.needsResolution)
+    ) {
+      const message = resolvingLink
+        ? "Aguarde a resolução do link do TikTok antes de enviar."
+        : "Não foi possível resolver o link curto do TikTok. Cole a URL completa do vídeo.";
+      setErrors((previous) => ({ ...previous, videoLink: message }));
+      focusFirstError({ videoLink: message });
       return;
     }
 
@@ -744,7 +808,11 @@ export function InfluencerForm() {
                     <Field
                       label="Link do vídeo"
                       htmlFor={FIELD_IDS.videoLink}
-                      hint="YouTube, Vimeo ou link direto"
+                      hint={
+                        resolvingLink
+                          ? "Resolvendo link do TikTok…"
+                          : "YouTube, Vimeo, Instagram, TikTok ou link direto"
+                      }
                       error={errors.videoLink}
                     >
                       <TextInput
@@ -753,12 +821,12 @@ export function InfluencerForm() {
                         value={values.videoLink}
                         onChange={(event) => {
                           setField("videoLink", event.target.value);
-                          clearErrors("video");
+                          clearErrors("video", "videoLink");
                           if (event.target.value.trim() && video) {
                             handleFileChange(null);
                           }
                         }}
-                        placeholder="https://youtube.com/shorts/..."
+                        placeholder="https://youtube.com/shorts/... ou https://www.instagram.com/reel/..."
                         inputMode="url"
                         autoCapitalize="none"
                         autoCorrect="off"
@@ -812,7 +880,9 @@ export function InfluencerForm() {
                                 ? ` em ${videoMetadata.width}×${videoMetadata.height}`
                                 : ""
                             }. Limite de 2 minutos e ${MAX_VIDEO_SIZE_MB} MB.`
-                          : `Vídeos de até 2 minutos e ${MAX_VIDEO_SIZE_MB} MB ajudam na avaliação. O envio de uma opção substitui a outra.`}
+                          : video && videoMetadata
+                            ? "Não foi possível verificar a duração deste formato. O limite de 2 minutos será conferido na análise."
+                            : `Vídeos de até 2 minutos e ${MAX_VIDEO_SIZE_MB} MB ajudam na avaliação. O envio de uma opção substitui a outra.`}
                     </p>
 
                     <div className="lg:hidden">

@@ -1,27 +1,40 @@
 "use client";
 
 import { parseVideoLink } from "@/lib/form-validation";
+import { buildVideoEmbed, type VideoEmbed } from "@/lib/video-embeds";
 import { cn } from "@/lib/utils";
 
 type VideoSource =
-  | { kind: "embed"; src: string }
-  | { kind: "file"; src: string };
+  | {
+      kind: "embed";
+      src: string;
+      allow: string;
+      aspectRatio: number;
+      href: string;
+      provider: VideoEmbed["provider"];
+    }
+  | { kind: "file"; src: string }
+  | { kind: "link"; src: string; label: string };
 
 function resolveVideoSource(url: string): VideoSource {
   const link = parseVideoLink(url);
 
-  if (link?.kind === "youtube") {
-    return {
-      kind: "embed",
-      src: `https://www.youtube.com/embed/${link.id}?autoplay=1&rel=0`,
-    };
+  if (link?.kind === "tiktok" && link.needsResolution) {
+    return { kind: "link", src: link.url, label: "Abrir vídeo no TikTok" };
   }
 
-  if (link?.kind === "vimeo") {
-    return {
-      kind: "embed",
-      src: `https://player.vimeo.com/video/${link.id}?autoplay=1`,
-    };
+  if (link && link.kind !== "file") {
+    const embed = buildVideoEmbed(link, true);
+    if (embed) {
+      return {
+        kind: "embed",
+        src: embed.src,
+        allow: embed.allow,
+        aspectRatio: embed.aspectRatio,
+        href: embed.href,
+        provider: embed.provider,
+      };
+    }
   }
 
   const driveId = url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/)?.[1];
@@ -30,6 +43,11 @@ function resolveVideoSource(url: string): VideoSource {
     return {
       kind: "embed",
       src: `https://drive.google.com/file/d/${driveId}/preview`,
+      allow:
+        "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share",
+      aspectRatio: 16 / 9,
+      href: `https://drive.google.com/file/d/${driveId}/view`,
+      provider: "Google Drive",
     };
   }
 
@@ -47,29 +65,77 @@ export function VideoPlayer({
 }) {
   const source = resolveVideoSource(url);
 
-  if (source.kind === "embed") {
+  if (source.kind === "link") {
     return (
-      <iframe
-        src={source.src}
-        title={title}
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowFullScreen
-        className={cn(
-          "aspect-video w-full rounded-2xl border-0 bg-black",
-          className
+      <a
+        href={source.src}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        {source.label}
+      </a>
+    );
+  }
+
+  if (source.kind === "embed") {
+    const isDrive = source.src.includes("drive.google.com");
+
+    return (
+      <div className="space-y-2">
+        <iframe
+          src={source.src}
+          title={title}
+          allow={source.allow}
+          allowFullScreen
+          style={{ aspectRatio: source.aspectRatio }}
+          className={cn(
+            "w-full rounded-2xl border-0 bg-black",
+            className
+          )}
+        />
+        {isDrive && (
+          <a
+            href={source.src.replace("/preview", "/view")}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Se o vídeo não abrir, acesse no Google Drive
+          </a>
         )}
-      />
+        {(source.provider === "Instagram" || source.provider === "TikTok") && (
+          <a
+            href={source.href}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Abrir no {source.provider}
+          </a>
+        )}
+      </div>
     );
   }
 
   return (
-    <video
-      src={source.src}
-      controls
-      autoPlay
-      playsInline
-      preload="metadata"
-      className={cn("max-h-[70vh] w-full rounded-2xl bg-black", className)}
-    />
+    <div className="space-y-2">
+      <video
+        src={source.src}
+        controls
+        autoPlay
+        playsInline
+        preload="metadata"
+        className={cn("max-h-[70vh] w-full rounded-2xl bg-black", className)}
+      />
+      <a
+        href={source.src}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        Abrir vídeo em nova aba
+      </a>
+    </div>
   );
 }

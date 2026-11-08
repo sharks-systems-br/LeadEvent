@@ -14,7 +14,7 @@ export default defineConfig({
     entitiesTs: ["./src/**/*.entity.ts"],
     driver: PostgreSqlDriver,
     clientUrl: databaseUrl,
-    driverOptions: { ssl: true },
+    driverOptions: { ssl: false },
     metadataProvider: ReflectMetadataProvider,
     extensions: [Migrator],
     migrations: {

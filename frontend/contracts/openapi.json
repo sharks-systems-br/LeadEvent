@@ -308,7 +308,7 @@
         ],
         "operationId": "uploadFile",
         "summary": "Envia um vídeo temporário",
-        "description": "Recebe o arquivo e devolve o filePath usado em POST /influencers. Limite de 80 MB e 2 minutos, validados no frontend quando possível.",
+        "description": "Recebe o arquivo e devolve o filePath usado em POST /influencers. Limite de 120 MB e 2 minutos (duração validada quando o navegador consegue ler os metadados). Aceita MP4, MOV, MKV, AVI, WEBM, WMV, FLV, MPEG, TS, 3GP, OGV e similares.",
         "x-status": "implemented",
         "requestBody": {
           "required": true,
@@ -854,7 +854,7 @@
           "videoUrl": {
             "type": "string",
             "format": "uri",
-            "description": "Link do YouTube, Vimeo ou Google Drive. Uploads internos geram uma URL de preview do Drive."
+            "description": "Link do YouTube, Vimeo, Instagram, TikTok ou Google Drive. Uploads internos geram uma URL de preview do Drive."
           },
           "state": {
             "type": "string",

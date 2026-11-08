@@ -1,6 +1,66 @@
-export const MAX_VIDEO_SIZE_MB = 80;
+export const MAX_VIDEO_SIZE_MB = 120;
 export const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
 export const MAX_VIDEO_DURATION_SECONDS = 120;
+
+export const VIDEO_EXTENSIONS = [
+  "mp4",
+  "m4v",
+  "mov",
+  "webm",
+  "mkv",
+  "avi",
+  "wmv",
+  "asf",
+  "flv",
+  "mpg",
+  "mpeg",
+  "mpe",
+  "m1v",
+  "m2v",
+  "mpv",
+  "ts",
+  "mts",
+  "m2ts",
+  "3gp",
+  "3g2",
+  "ogv",
+  "ogg",
+  "f4v",
+] as const;
+
+export const VIDEO_EXTENSION_REGEX =
+  /\.(mp4|m4v|mov|webm|mkv|avi|wmv|asf|flv|mpg|mpeg|mpe|m1v|m2v|mpv|ts|mts|m2ts|3gp|3g2|ogv|ogg|f4v)$/i;
+
+export const VIDEO_ACCEPT =
+  "video/*,.mp4,.m4v,.mov,.webm,.mkv,.avi,.wmv,.asf,.flv,.mpg,.mpeg,.mpe,.m1v,.m2v,.mpv,.ts,.mts,.m2ts,.3gp,.3g2,.ogv,.ogg,.f4v";
+
+const BROWSER_PLAYABLE_EXTENSIONS = [
+  "mp4",
+  "m4v",
+  "mov",
+  "webm",
+  "ogv",
+  "ogg",
+] as const;
+
+const BROWSER_PLAYABLE_MIME_TYPES = [
+  "video/mp4",
+  "video/x-m4v",
+  "video/quicktime",
+  "video/webm",
+  "video/ogg",
+] as const;
+
+export function isBrowserPlayableVideo(file: File): boolean {
+  const dotIndex = file.name.lastIndexOf(".");
+  const extension =
+    dotIndex >= 0 ? file.name.slice(dotIndex + 1).toLowerCase() : "";
+
+  return (
+    (BROWSER_PLAYABLE_EXTENSIONS as readonly string[]).includes(extension) ||
+    (BROWSER_PLAYABLE_MIME_TYPES as readonly string[]).includes(file.type)
+  );
+}
 
 const METADATA_TIMEOUT_MS = 12000;
 

@@ -1,8 +1,7 @@
 import { BadRequestException, Injectable, PipeTransform } from "@nestjs/common";
 import { fileTypeFromFile } from "file-type";
 import { FilesService } from "../../modules/files/files.service.js";
-
-const ALLOWED = new Set(["video/mp4", "video/webm", "video/quicktime"]);
+import { ACCEPTED_VIDEO_MIME_TYPES } from "../constants/video.constants.js";
 
 @Injectable()
 export class VideoFilePipe implements PipeTransform<Express.Multer.File> {
@@ -12,10 +11,13 @@ export class VideoFilePipe implements PipeTransform<Express.Multer.File> {
         if (!file) throw new BadRequestException("Arquivo obrigatório.");
 
         const type = await fileTypeFromFile(file.path);
+        const mime = type?.mime.toLowerCase();
 
-        if (!type || !ALLOWED.has(type.mime)) {
+        if (!type || !mime || !ACCEPTED_VIDEO_MIME_TYPES.has(mime)) {
             await this.filesService.removeFile(file.path);
-            throw new BadRequestException("O arquivo não é um vídeo válido.");
+            throw new BadRequestException(
+                "Formato de vídeo não suportado. Envie MP4, MOV, MKV, AVI, WEBM, WMV, FLV, MPEG, TS, 3GP, OGV ou similar.",
+            );
         }
 
         file.mimetype = type.mime;

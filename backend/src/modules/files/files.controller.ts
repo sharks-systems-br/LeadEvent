@@ -6,6 +6,7 @@ import { SaveFileResponseDto } from "./dto/save-file-response.dto.js";
 import { VideoFilePipe } from "../../common/pipes/video-file.pipe.js";
 import { minutes, seconds, Throttle } from "@nestjs/throttler";
 import { Public } from "../../common/decorators/public.decorator.js";
+import { MAX_VIDEO_SIZE_BYTES, isAcceptedVideoUpload } from "../../common/constants/video.constants.js";
 
 @Controller("files")
 export class FilesController {
@@ -20,9 +21,9 @@ export class FilesController {
     @UseInterceptors(
         FileInterceptor("file", {
             storage: diskStorage({ destination: "./tmp" }),
-            limits: { fileSize: 80 * 1024 * 1024 },
+            limits: { fileSize: MAX_VIDEO_SIZE_BYTES },
             fileFilter: (_req, file, cb) => {
-                const ok = /^video\/(mp4|webm|mov)$/.test(file.mimetype);
+                const ok = isAcceptedVideoUpload(file.mimetype, file.originalname);
                 cb(ok ? null : new BadRequestException("Formato de arquivo não suportado."), ok);
             },
         }),

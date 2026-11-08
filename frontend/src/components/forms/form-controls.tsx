@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatFileSize, isVideoFile } from "@/lib/form-validation";
-import { MAX_VIDEO_SIZE_MB } from "@/lib/video-validation";
+import { MAX_VIDEO_SIZE_MB, VIDEO_ACCEPT } from "@/lib/video-validation";
 
 export const controlBase =
   "w-full border border-black/10 bg-white text-sm text-foreground shadow-[0_1px_0_rgba(0,0,0,0.02)] outline-none transition placeholder:text-muted-foreground/60 focus:border-black/30 focus:ring-4 focus:ring-black/[0.05] disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:opacity-70";
@@ -394,7 +394,7 @@ export function UploadDropzone({
   file,
   onFileChange,
   onReject,
-  accept = "video/*",
+  accept = VIDEO_ACCEPT,
   maxSizeMb = MAX_VIDEO_SIZE_MB,
   invalid,
 }: UploadDropzoneProps) {
@@ -404,7 +404,9 @@ export function UploadDropzone({
     if (!selected) return;
 
     if (!selected.type.startsWith("video/") && !isVideoFile(selected)) {
-      onReject("Envie um arquivo de vídeo (MP4, MOV, WEBM...).");
+      onReject(
+        "Envie um arquivo de vídeo válido (MP4, MOV, MKV, AVI, WEBM, WMV...)."
+      );
       return;
     }
 
@@ -477,7 +479,7 @@ export function UploadDropzone({
         <span className="mt-1 block text-[11px] text-muted-foreground">
           {file
             ? `${formatFileSize(file.size)} · pronto para a prévia`
-            : `MP4, MOV, WEBM · até ${maxSizeMb} MB · 2 min`}
+            : `MP4, MOV, MKV, AVI, WEBM, WMV e mais · até ${maxSizeMb} MB · 2 min`}
         </span>
       </label>
 

@@ -7,6 +7,7 @@ import { Check, Clapperboard, Link2, Maximize2, Play, X } from "lucide-react";
 import type { VideoLink } from "@/lib/form-validation";
 import { formatFileSize } from "@/lib/form-validation";
 import { MAX_VIDEO_SIZE_MB } from "@/lib/video-validation";
+import { buildVideoEmbed } from "@/lib/video-embeds";
 import { cn } from "@/lib/utils";
 
 export type PreviewSource =
@@ -76,6 +77,7 @@ function describeAspect(width: number, height: number) {
 interface MediaProps {
   source: PreviewSource;
   onReady?: () => void;
+  onError?: () => void;
   onAspectRatio?: (width: number, height: number) => void;
   className?: string;
   autoPlay?: boolean;
@@ -84,55 +86,58 @@ interface MediaProps {
 function Media({
   source,
   onReady,
+  onError,
   onAspectRatio,
   className,
   autoPlay = false,
 }: MediaProps) {
-  if (source.kind === "youtube") {
+  if (source.kind === "file" || source.kind === "upload") {
     return (
-      <iframe
-        src={`https://www.youtube-nocookie.com/embed/${source.id}?rel=0&modestbranding=1&playsinline=1${autoPlay ? "&autoplay=1" : ""}`}
-        title="Prévia do vídeo do YouTube"
-        loading="lazy"
-        onLoad={onReady}
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowFullScreen
-        className={cn("h-full w-full border-0", className)}
+      <video
+        src={source.url}
+        controls
+        playsInline
+        autoPlay={autoPlay}
+        preload="metadata"
+        controlsList="nodownload"
+        onLoadedMetadata={(event) =>
+          onAspectRatio?.(
+            event.currentTarget.videoWidth,
+            event.currentTarget.videoHeight
+          )
+        }
+        onLoadedData={onReady}
+        onError={onError}
+        className={cn("h-full w-full bg-black object-contain", className)}
       />
     );
   }
 
-  if (source.kind === "vimeo") {
+  if (source.kind === "tiktok" && source.needsResolution) {
     return (
-      <iframe
-        src={`https://player.vimeo.com/video/${source.id}?dnt=1&title=0&byline=0&portrait=0${autoPlay ? "&autoplay=1" : ""}`}
-        title="Prévia do vídeo do Vimeo"
-        loading="lazy"
-        onLoad={onReady}
-        allow="autoplay; fullscreen; picture-in-picture"
-        allowFullScreen
-        className={cn("h-full w-full border-0", className)}
-      />
+      <div
+        className={cn(
+          "flex h-full w-full items-center justify-center bg-black px-6 text-center text-xs text-white/60",
+          className
+        )}
+      >
+        Resolvendo link do TikTok…
+      </div>
     );
   }
+
+  const embed = buildVideoEmbed(source, autoPlay);
+  if (!embed) return null;
 
   return (
-    <video
-      src={source.url}
-      controls
-      playsInline
-      autoPlay={autoPlay}
-      preload="metadata"
-      controlsList="nodownload"
-      onLoadedMetadata={(event) =>
-        onAspectRatio?.(
-          event.currentTarget.videoWidth,
-          event.currentTarget.videoHeight
-        )
-      }
-      onLoadedData={onReady}
-      onError={onReady}
-      className={cn("h-full w-full bg-black object-contain", className)}
+    <iframe
+      src={embed.src}
+      title={embed.title}
+      loading="lazy"
+      onLoad={onReady}
+      allow={embed.allow}
+      allowFullScreen
+      className={cn("h-full w-full border-0", className)}
     />
   );
 }
@@ -141,6 +146,8 @@ function sourceKey(source: PreviewSource | null): string {
   if (!source) return "empty";
   if (source.kind === "youtube") return `youtube-${source.id}`;
   if (source.kind === "vimeo") return `vimeo-${source.id}`;
+  if (source.kind === "instagram") return `instagram-${source.id}`;
+  if (source.kind === "tiktok") return `tiktok-${source.id || source.url}`;
   return `${source.kind}-${source.url}`;
 }
 
@@ -196,10 +203,19 @@ export function VideoPreview({
 
   const key = sourceKey(source);
   const hasSource = Boolean(source);
+  const embed =
+    source && source.kind !== "file" && source.kind !== "upload"
+      ? buildVideoEmbed(source)
+      : null;
+  const socialEmbed =
+    embed && (source?.kind === "instagram" || source?.kind === "tiktok")
+      ? embed
+      : null;
 
   const [inView, setInView] = React.useState(false);
   const [readyKey, setReadyKey] = React.useState<string | null>(null);
   const [slowKey, setSlowKey] = React.useState<string | null>(null);
+  const [failedKey, setFailedKey] = React.useState<string | null>(null);
   const [aspect, setAspect] = React.useState<{
     key: string;
     ratio: number;
@@ -208,15 +224,18 @@ export function VideoPreview({
   const [expandedKey, setExpandedKey] = React.useState<string | null>(null);
   const [mounted, setMounted] = React.useState(false);
 
-  const ready = readyKey === key;
-  const slow = slowKey === key && !ready && inView;
+  const failed = failedKey === key && hasSource;
+  const ready = readyKey === key && !failed;
+  const slow = slowKey === key && !ready && !failed && inView;
   const expanded = expandedKey === key && hasSource;
   const activeAspect = aspect && aspect.key === key ? aspect : null;
-  const ratio = activeAspect?.ratio ?? DEFAULT_RATIO;
+  const ratio =
+    activeAspect?.ratio ?? socialEmbed?.aspectRatio ?? DEFAULT_RATIO;
   const expandedRatio =
-    source && (source.kind === "file" || source.kind === "upload")
+    socialEmbed?.aspectRatio ??
+    (source && (source.kind === "file" || source.kind === "upload")
       ? ratio
-      : 16 / 9;
+      : 16 / 9);
 
   const formatRef = React.useRef(onFormatChange);
   React.useEffect(() => {
@@ -266,6 +285,10 @@ export function VideoPreview({
 
   const markReady = React.useCallback(() => {
     setReadyKey(key);
+  }, [key]);
+
+  const markFailed = React.useCallback(() => {
+    setFailedKey(key);
   }, [key]);
 
   const handleAspectRatio = React.useCallback(
@@ -350,6 +373,7 @@ export function VideoPreview({
                 <Media
                   source={source}
                   onReady={markReady}
+                  onError={markFailed}
                   onAspectRatio={handleAspectRatio}
                   className="absolute inset-0"
                 />
@@ -405,6 +429,13 @@ export function VideoPreview({
 
         <AnimatePresence>{slow && <SlowLoading />}</AnimatePresence>
 
+        {failed && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 px-6 text-center text-sm text-white/80">
+            Este formato não abre no navegador, mas o arquivo será enviado
+            normalmente.
+          </div>
+        )}
+
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 p-4">
           <div className="pointer-events-auto">
             {source && onClear && (
@@ -457,6 +488,21 @@ export function VideoPreview({
         </p>
       </div>
 
+      {source &&
+        embed &&
+        (source.kind === "instagram" || source.kind === "tiktok") && (
+          <div className="bg-black px-4 py-3.5">
+            <a
+              href={source.url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-medium text-white/80 underline-offset-4 transition-colors hover:text-white hover:underline"
+            >
+              Se a prévia não abrir, ver no {embed.provider}
+            </a>
+          </div>
+        )}
+
       {!source && (
         <div className="bg-black px-4 py-3.5">
           <div className="flex items-center justify-between gap-3">
@@ -465,7 +511,7 @@ export function VideoPreview({
                 Aguardando vídeo
               </p>
               <p className="mt-1 truncate text-xs text-white/90">
-                {`Link do YouTube/Vimeo ou arquivo até ${MAX_VIDEO_SIZE_MB} MB`}
+                {`Link do YouTube, Vimeo, Instagram, TikTok ou arquivo até ${MAX_VIDEO_SIZE_MB} MB`}
               </p>
             </div>
 
@@ -510,10 +556,18 @@ export function VideoPreview({
                   <Media
                     source={source}
                     onReady={markReady}
+                    onError={markFailed}
                     onAspectRatio={handleAspectRatio}
                     className="absolute inset-0"
                     autoPlay
                   />
+
+                  {failed && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 px-6 text-center text-sm text-white/80">
+                      Este formato não abre no navegador, mas o arquivo será
+                      enviado normalmente.
+                    </div>
+                  )}
 
                   <div className="absolute inset-x-0 top-0 flex justify-end p-3">
                     <button

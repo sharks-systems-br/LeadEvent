@@ -1,3 +1,10 @@
+import {
+  VIDEO_EXTENSION_REGEX,
+  VIDEO_EXTENSIONS,
+} from "./video-validation";
+
+export { VIDEO_EXTENSIONS };
+
 export const onlyDigits = (value: string) => value.replace(/\D+/g, "");
 
 export function formatPhone(value: string): string {
@@ -29,9 +36,6 @@ export const NAME_CHARS_RE = /^[A-Za-zÀ-ÖØ-öø-ÿ' -]+$/;
 export const COMPANY_NAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} &.'’()/-]{1,79}$/u;
 export const DOMAIN_RE =
   /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}(?:\/\S*)?$/i;
-
-const VIDEO_FILE_RE = /\.(mp4|webm|ogv|ogg|mov|m4v)$/i;
-export const VIDEO_EXTENSIONS = ["mp4", "webm", "ogv", "ogg", "mov", "m4v"];
 
 export function isValidFullName(value: string): boolean {
   const normalized = value.trim().replace(/\s+/g, " ");
@@ -144,6 +148,14 @@ export function isValidCNPJ(value: string): boolean {
 export type VideoLink =
   | { kind: "youtube"; id: string; label: string }
   | { kind: "vimeo"; id: string; label: string }
+  | { kind: "instagram"; id: string; url: string; label: string }
+  | {
+      kind: "tiktok";
+      id: string;
+      url: string;
+      label: string;
+      needsResolution?: boolean;
+    }
   | { kind: "file"; url: string; label: string };
 
 export function parseVideoLink(value: string): VideoLink | null {
@@ -186,7 +198,78 @@ export function parseVideoLink(value: string): VideoLink | null {
     if (id) return { kind: "vimeo", id, label: "Link do Vimeo" };
   }
 
-  if (VIDEO_FILE_RE.test(path) && isWebUrl(url.toString())) {
+  if (host === "instagram.com" || host === "m.instagram.com") {
+    const match = path.match(
+      /^\/(?:[A-Za-z0-9._]+\/)?(p|reels?|tv)\/([A-Za-z0-9_-]+)/
+    );
+
+    if (match && match[2] !== "audio") {
+      const [, rawType, id] = match;
+      const type = rawType === "reels" ? "reel" : rawType;
+      return {
+        kind: "instagram",
+        id,
+        url: `https://www.instagram.com/${type}/${id}/`,
+        label: "Link do Instagram",
+      };
+    }
+  }
+
+  if (
+    host === "tiktok.com" ||
+    host === "m.tiktok.com" ||
+    host === "vm.tiktok.com" ||
+    host === "vt.tiktok.com"
+  ) {
+    if (
+      host === "vm.tiktok.com" ||
+      host === "vt.tiktok.com" ||
+      path.startsWith("/t/")
+    ) {
+      return {
+        kind: "tiktok",
+        id: "",
+        url: url.toString(),
+        label: "Link do TikTok",
+        needsResolution: true,
+      };
+    }
+
+    const full = path.match(/^\/@([^/]+)\/video\/(\d+)/);
+    if (full) {
+      const [, username, id] = full;
+      return {
+        kind: "tiktok",
+        id,
+        url: `https://www.tiktok.com/@${username}/video/${id}`,
+        label: "Link do TikTok",
+      };
+    }
+
+    const share = path.match(/^\/share\/video\/(\d+)/);
+    if (share) {
+      const [, id] = share;
+      return {
+        kind: "tiktok",
+        id,
+        url: `https://www.tiktok.com/player/v1/${id}`,
+        label: "Link do TikTok",
+      };
+    }
+
+    const player = path.match(/^\/player\/v1\/(\d+)/);
+    if (player) {
+      const [, id] = player;
+      return {
+        kind: "tiktok",
+        id,
+        url: `https://www.tiktok.com/player/v1/${id}`,
+        label: "Link do TikTok",
+      };
+    }
+  }
+
+  if (VIDEO_EXTENSION_REGEX.test(path) && isWebUrl(url.toString())) {
     return { kind: "file", url: url.toString(), label: "Vídeo por link" };
   }
 
@@ -196,7 +279,7 @@ export function parseVideoLink(value: string): VideoLink | null {
 export function isVideoFile(file: File): boolean {
   if (file.type.startsWith("video/")) return true;
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
-  return VIDEO_EXTENSIONS.includes(extension);
+  return (VIDEO_EXTENSIONS as readonly string[]).includes(extension);
 }
 
 export function formatFileSize(bytes: number): string {
