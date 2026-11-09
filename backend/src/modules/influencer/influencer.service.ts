@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { CreateInfluencerDto } from "./dto/create-influencer.dto.js";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Influencer } from "./entities/influencer.entity.js";
@@ -37,14 +37,12 @@ export class InfluencerService {
 
         if (filePath) {
             await this.filesService.verifyFilePath(filePath);
-        } else if (!fileUrl) {
-            throw new BadRequestException("O video precisa ser fornecido.");
         }
 
         await this.assertInstagramIsAvailable(dto.instagram);
 
         let videoId: string | undefined;
-        let videoUrl = fileUrl;
+        let videoUrl = fileUrl ?? "";
         if (filePath && !fileUrl) {
             const { id } = await this.storageService.upload(filePath);
 
