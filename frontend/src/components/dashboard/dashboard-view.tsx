@@ -52,6 +52,7 @@ import {
 } from "@/lib/api/dashboard";
 import type { Disponibility, FollowerRange } from "@/lib/api/types";
 import { clearTokens } from "@/lib/auth";
+import { notifyLead, type LeadRecipient } from "@/lib/lead-notifications";
 import { brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
@@ -173,12 +174,28 @@ function FilterSelect({
 function LeadActions({
   status,
   loading = false,
+  recipient,
   onChange,
+  onNotice,
 }: {
   status: LeadStatus;
   loading?: boolean;
+  recipient: LeadRecipient;
   onChange: (status: LeadStatus) => void;
+  onNotice: (message: string) => void;
 }) {
+  function notify(decision: "APPROVED" | "REJECTED") {
+    const channel = notifyLead(recipient, decision, () =>
+      onNotice("Sem WhatsApp válido: mensagem copiada. Cole na conversa do Instagram.")
+    );
+
+    if (channel === "none") {
+      onNotice("Cadastro sem WhatsApp ou Instagram válido para notificação.");
+    }
+
+    onChange(decision);
+  }
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-black/[0.06] pt-3">
       <span
@@ -201,7 +218,7 @@ function LeadActions({
         {status !== "APPROVED" && (
           <button
             type="button"
-            onClick={() => onChange("APPROVED")}
+            onClick={() => notify("APPROVED")}
             disabled={loading}
             className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -223,7 +240,7 @@ function LeadActions({
         ) : (
           <button
             type="button"
-            onClick={() => onChange("REJECTED")}
+            onClick={() => notify("REJECTED")}
             disabled={loading}
             className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[11px] font-medium text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -292,6 +309,8 @@ export function DashboardView() {
   const [stateFilter, setStateFilter] = useState("ALL");
   const [page, setPage] = useState(1);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimerRef = useRef<number | null>(null);
   const initialFetchRef = useRef<Promise<DashboardData> | null>(null);
 
   const applyDemoData = useCallback(async () => {
@@ -384,6 +403,19 @@ export function DashboardView() {
       active = false;
     };
   }, [fetchDashboard, applyDashboardData, handleLoadFailure]);
+
+  useEffect(() => {
+    return () => {
+      if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
+    };
+  }, []);
+
+  function showNotice(message: string) {
+    setNotice(message);
+
+    if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = window.setTimeout(() => setNotice(null), 4000);
+  }
 
   function refresh() {
     setRefreshing(true);
@@ -1196,6 +1228,14 @@ export function DashboardView() {
                               <LeadActions
                                 status={company.status}
                                 loading={updatingLeadId === company.id}
+                                recipient={{
+                                  kind: "company",
+                                  name: company.personName,
+                                  companyName: company.tradeName,
+                                  instagram: company.socialMedia,
+                                  availability: company.disponibility,
+                                }}
+                                onNotice={showNotice}
                                 onChange={(nextStatus) =>
                                   void changeCompanyStatus(
                                     company.id,
@@ -1214,6 +1254,13 @@ export function DashboardView() {
                               <LeadActions
                                 status={influencer.status}
                                 loading={updatingLeadId === influencer.id}
+                                recipient={{
+                                  kind: "influencer",
+                                  name: influencer.name,
+                                  phone: influencer.phone,
+                                  instagram: influencer.instagram,
+                                }}
+                                onNotice={showNotice}
                                 onChange={(nextStatus) =>
                                   void changeInfluencerStatus(
                                     influencer.id,
@@ -1281,6 +1328,15 @@ export function DashboardView() {
           </main>
         </div>
       </div>
+
+      {notice && (
+        <div
+          role="status"
+          className="fixed bottom-5 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-xl border border-black/10 bg-foreground px-4 py-3 text-center text-xs font-medium text-background shadow-lg"
+        >
+          {notice}
+        </div>
+      )}
     </div>
   );
 }
