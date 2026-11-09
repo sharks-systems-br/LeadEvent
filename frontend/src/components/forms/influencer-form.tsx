@@ -156,7 +156,6 @@ const FIELD_IDS: Record<FieldKey, string> = {
 
 function validate(
   values: InfluencerValues,
-  hasFile: boolean,
   turnstileToken: string | null
 ): Errors {
   const errors: Errors = {};
@@ -176,7 +175,7 @@ function validate(
   if (!values.phone.trim()) {
     errors.phone = "Informe o seu telefone com DDD.";
   } else if (!isValidPhone(values.phone)) {
-    errors.phone = "Informe um telefone válido com DDD.";
+    errors.phone = "Telefone inválido. Use DDD + número com 10 ou 11 dígitos.";
   }
 
   if (!values.description.trim()) {
@@ -201,8 +200,6 @@ function validate(
   if (link && !parseVideoLink(link)) {
     errors.videoLink =
       "Use um link do YouTube, Vimeo, Instagram, TikTok ou um arquivo de vídeo direto.";
-  } else if (!link && !hasFile) {
-    errors.video = "Adicione o link do seu vídeo ou envie um arquivo.";
   }
 
   if (!values.followers) {
@@ -343,6 +340,25 @@ export function InfluencerForm() {
       for (const key of keys) delete next[key];
       return next;
     });
+  };
+
+  const handlePhoneBlur = () => {
+    const phone = values.phone.trim();
+
+    if (!phone) {
+      setErrors((previous) => ({
+        ...previous,
+        phone: "Informe o seu telefone com DDD.",
+      }));
+      return;
+    }
+
+    if (!isValidPhone(phone)) {
+      setErrors((previous) => ({
+        ...previous,
+        phone: "Telefone inválido. Use DDD + número com 10 ou 11 dígitos.",
+      }));
+    }
   };
 
   const handleUfChange = (uf: string) => {
@@ -550,7 +566,7 @@ export function InfluencerForm() {
       return;
     }
 
-    const nextErrors = validate(values, Boolean(video), turnstileToken);
+    const nextErrors = validate(values, turnstileToken);
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       focusFirstError(nextErrors);
@@ -719,6 +735,7 @@ export function InfluencerForm() {
                           onChange={(event) =>
                             setField("phone", formatPhone(event.target.value))
                           }
+                          onBlur={handlePhoneBlur}
                           placeholder="(11) 99999-9999"
                           inputMode="tel"
                           autoComplete="tel"
@@ -801,17 +818,17 @@ export function InfluencerForm() {
 
                   <FormSection
                     step="03"
-                    title="Vídeo de apresentação"
-                    description="Escolha uma das opções. O vídeo aparece na prévia ao lado."
+                    title="Vídeo de apresentação (opcional)"
+                    description="Opcional. Escolha uma das opções. O vídeo aparece na prévia ao lado."
                     icon={Video}
                   >
                     <Field
-                      label="Link do vídeo"
+                      label="Link do vídeo (opcional)"
                       htmlFor={FIELD_IDS.videoLink}
                       hint={
                         resolvingLink
                           ? "Resolvendo link do TikTok…"
-                          : "YouTube, Vimeo, Instagram, TikTok ou link direto"
+                          : "Opcional: YouTube, Vimeo, Instagram, TikTok ou link direto"
                       }
                       error={errors.videoLink}
                     >
